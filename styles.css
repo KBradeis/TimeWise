@@ -294,6 +294,7 @@ input:focus-visible {
 }
 
 .pill-purple { background: #ece9fd; color: var(--purple-dark); }
+.pill-blue { background: #e3f0ff; color: #2563a8; }
 .pill-green { background: #dcfce9; color: var(--green-dark); }
 .pill-orange { background: #ffe8d6; color: var(--orange-dark); }
 
@@ -539,6 +540,53 @@ input:focus-visible {
 
 .how-it-works {
   background: var(--bg);
+}
+
+/* Storyboard: a short narrative walkthrough of the product in use */
+.storyboard {
+  background: var(--bg-alt);
+}
+
+.storyboard-grid {
+  margin-top: 44px;
+}
+
+.storyboard-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  text-align: left;
+}
+
+.storyboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.storyboard-card .pill {
+  margin-bottom: 16px;
+}
+
+.storyboard-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.storyboard-caption {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.storyboard-card p:not(.storyboard-caption) {
+  color: var(--text-muted);
+  font-size: 0.95rem;
 }
 
 .steps-grid {

@@ -17,6 +17,9 @@ tracker.
 - **Solution** — how TimeWise's practice-session model works
 - **Features** — the core feature set as scannable cards
 - **How It Works** — a simple 4-step flow
+- **Storyboard** — a short narrative walkthrough ("A day with TimeWise, through Maya's eyes") showing
+  four concrete screens: a color-coded dashboard, a "plan what matters today" screen, a "replan my day"
+  screen for when things change, and an end-of-day reflection screen
 - **Live demo** — a fully working mock-up of the practice experience: a phone-style card with a
   home screen, a 10-question practice session (one question at a time, multiple choice,
   immediate supportive feedback, live score/streak/XP/progress bar), and a session summary with
