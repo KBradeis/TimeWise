@@ -729,6 +729,252 @@ input:focus-visible {
   color: var(--purple-dark);
 }
 
+/* Connect Your Calendars */
+.calendars {
+  background: var(--bg);
+}
+
+.calendar-connect-panel {
+  max-width: 640px;
+  margin: 40px auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px 28px;
+  box-shadow: var(--shadow-md);
+}
+
+.calendar-panel-heading {
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+
+.calendar-panel-sub {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+
+.calendar-providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.provider-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  min-height: 48px;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease, background 0.15s ease;
+}
+
+.provider-btn:hover:not(:disabled) {
+  border-color: var(--purple);
+  transform: translateY(-1px);
+}
+
+.provider-btn:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.provider-btn.is-connected {
+  border-color: var(--green);
+  background: #eafcf1;
+  color: var(--green-dark);
+}
+
+.provider-icon {
+  font-size: 1.05rem;
+}
+
+.provider-status-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.provider-sample-card {
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+
+.provider-sample-card .provider-sample-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.demo-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--orange);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.provider-sample-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.provider-sample-card li {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.calendar-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 26px 0 22px;
+}
+
+.calendar-divider::before,
+.calendar-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.calendar-divider span {
+  padding: 0 14px;
+}
+
+.ics-upload-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ics-upload-area:hover {
+  border-color: var(--purple);
+  background: var(--bg-alt);
+}
+
+.ics-upload-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.ics-upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ics-upload-text small {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.ics-upload-area input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.ics-status {
+  margin-top: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  min-height: 1.2em;
+}
+
+.ics-status.is-error {
+  color: #c0356c;
+}
+
+.ics-status.is-success {
+  color: var(--green-dark);
+}
+
+.calendar-events-preview {
+  margin-top: 20px;
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+}
+
+.calendar-events-preview h4 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--purple-dark);
+  margin-bottom: 12px;
+}
+
+.calendar-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.calendar-events-list li {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.calendar-event-title {
+  display: block;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.calendar-event-time {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.calendar-disclaimer {
+  max-width: 640px;
+  margin: 20px auto 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* ---------- 7. Demo phone mockup ---------- */
 .demo-section {
   background: var(--surface);
@@ -1120,6 +1366,47 @@ input:focus-visible {
   text-align: center;
 }
 
+/* ---------- 404 page ---------- */
+.not-found {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 24px;
+  background: radial-gradient(circle at 15% 20%, #eee9ff 0%, transparent 45%),
+              radial-gradient(circle at 90% 10%, #e3f6ff 0%, transparent 40%),
+              var(--bg);
+}
+
+.not-found-inner {
+  max-width: 560px;
+}
+
+.not-found-emoji {
+  font-size: 4.5rem;
+  margin-bottom: 8px;
+}
+
+.not-found h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  margin-bottom: 14px;
+}
+
+.not-found p {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  max-width: 480px;
+  margin: 0 auto 28px;
+}
+
+.not-found-actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 /* ---------- 9. Responsive breakpoints ---------- */
 @media (max-width: 960px) {
   .hero-grid,
@@ -1212,6 +1499,20 @@ input:focus-visible {
 
   .compare-card ul li {
     font-size: 0.92rem;
+  }
+
+  .calendar-connect-panel {
+    padding: 24px 18px;
+  }
+
+  .ics-upload-area {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .provider-btn {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }
 

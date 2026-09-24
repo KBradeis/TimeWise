@@ -1,0 +1,8 @@
+{
+  "name": "timewise-pitch",
+  "compatibility_date": "2026-09-22",
+  "assets": {
+    "directory": ".",
+    "not_found_handling": "404-page"
+  }
+}

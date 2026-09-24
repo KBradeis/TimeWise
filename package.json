@@ -1,0 +1,13 @@
+{
+  "name": "timewise-pitch",
+  "private": true,
+  "version": "1.0.0",
+  "description": "TimeWise pitch website — static HTML/CSS/JS site with no required build step.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "latest"
+  }
+}

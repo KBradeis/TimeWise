@@ -6,8 +6,33 @@
   <title>TimeWise — Practice Time Management, One Question at a Time</title>
   <meta name="description" content="TimeWise helps college students reflect on how they spend their time, connect habits to goals and deadlines, and build a realistic plan — one short question at a time." />
 
-  <!-- Favicon -->
+  <!--
+    Social preview (Open Graph + Twitter Card): the URLs below assume the
+    GitHub Pages address from the README. If you deploy somewhere else
+    (a Cloudflare domain, a custom domain, etc.), update the four URLs
+    in this block to match — link previews on iMessage/Slack/Twitter/etc.
+    fetch og:image directly, so it needs to be a real, absolute URL.
+  -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="TimeWise" />
+  <meta property="og:title" content="TimeWise — Build Better Time Habits, One Small Win at a Time" />
+  <meta property="og:description" content="A time management skill-practice app concept for college students — reflection meets practical planning, one short question at a time." />
+  <meta property="og:url" content="https://kbradeis.github.io/TimeWise/" />
+  <meta property="og:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="TimeWise — Build Better Time Habits, One Small Win at a Time" />
+  <meta name="twitter:description" content="A time management skill-practice app concept for college students — reflection meets practical planning, one short question at a time." />
+  <meta name="twitter:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
+  <meta name="twitter:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+
+  <!-- Favicon (SVG for modern browsers, .ico fallback for older ones) -->
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="alternate icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 
   <!-- Friendly rounded font, with solid system-font fallback if offline -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -36,6 +61,7 @@
         <a href="#features">Features</a>
         <a href="#how-it-works">How It Works</a>
         <a href="#storyboard">Storyboard</a>
+        <a href="#calendars">Calendars</a>
         <a href="#demo">Demo</a>
         <a href="#why-different">Why TimeWise</a>
         <a href="#demo" class="btn btn-primary btn-small">Try the Demo</a>
@@ -284,6 +310,109 @@
       </div>
     </section>
 
+    <!-- ============ CONNECT YOUR CALENDARS ============ -->
+    <section id="calendars" class="section calendars">
+      <div class="container">
+        <p class="eyebrow eyebrow-center">Bring It All Together</p>
+        <h2 class="section-title section-title-center">Connect every part of your schedule</h2>
+        <p class="section-lead section-lead-center">
+          TimeWise is designed to pull classes, shifts, club meetings, and deadlines into one calm view —
+          however your calendar already lives. Add an event or upload a calendar file below and watch your
+          week take shape.
+        </p>
+
+        <!-- Live "this week" grid — fed by the quick-add form, the .ics upload, and the preview connects -->
+        <div class="week-grid-wrap">
+          <div class="week-grid-header">
+            <h3 class="calendar-panel-heading week-grid-title">Your week</h3>
+            <button type="button" class="week-clear-btn" id="weekClearBtn">Clear my week</button>
+          </div>
+          <div class="week-grid" id="weekGrid" aria-live="polite"></div>
+          <div class="week-grid-legend">
+            <span class="week-legend-item"><span class="week-legend-dot week-event-class"></span>Class</span>
+            <span class="week-legend-item"><span class="week-legend-dot week-event-assignment"></span>Assignment</span>
+            <span class="week-legend-item"><span class="week-legend-dot week-event-personal"></span>Personal</span>
+          </div>
+        </div>
+
+        <div class="calendar-connect-panel">
+          <h3 class="calendar-panel-heading">Add an event</h3>
+          <p class="calendar-panel-sub">
+            Type in a class, shift, or deadline — it drops straight into the grid above.
+          </p>
+          <form class="quick-add-form" id="quickAddForm">
+            <div class="quick-add-row">
+              <label class="quick-add-field quick-add-field-title">
+                <span>Title</span>
+                <input type="text" id="quickAddTitle" placeholder="e.g. BUS 131A Lecture" maxlength="60" required />
+              </label>
+              <label class="quick-add-field quick-add-field-category">
+                <span>Type</span>
+                <select id="quickAddCategory">
+                  <option value="class">Class</option>
+                  <option value="assignment">Assignment</option>
+                  <option value="personal">Personal</option>
+                </select>
+              </label>
+            </div>
+            <div class="quick-add-row">
+              <label class="quick-add-field">
+                <span>Date</span>
+                <input type="date" id="quickAddDate" required />
+              </label>
+              <label class="quick-add-field">
+                <span>Start time</span>
+                <input type="time" id="quickAddStart" required />
+              </label>
+              <label class="quick-add-field">
+                <span>End time <small>(optional)</small></span>
+                <input type="time" id="quickAddEnd" />
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary quick-add-submit">+ Add to my week</button>
+          </form>
+
+          <div class="calendar-divider"><span>or</span></div>
+
+          <h3 class="calendar-panel-heading">Quick connect (preview)</h3>
+          <p class="calendar-panel-sub">A look at the experience — these two don't link a real account yet.</p>
+          <div class="calendar-providers">
+            <button type="button" class="provider-btn" data-provider="google" data-label="Google Calendar">
+              <span class="provider-icon">🗓️</span> Connect Google Calendar
+            </button>
+            <button type="button" class="provider-btn" data-provider="notion" data-label="Notion">
+              <span class="provider-icon">📝</span> Connect Notion
+            </button>
+          </div>
+          <p class="provider-status-note" id="providerStatusNote" aria-live="polite"></p>
+
+          <div class="calendar-divider"><span>or</span></div>
+
+          <h3 class="calendar-panel-heading">Upload a calendar file</h3>
+          <p class="calendar-panel-sub">
+            This one's real: works with Apple Calendar, Samsung Calendar, Outlook, Moodle, or anything that
+            exports a standard <strong>.ics</strong> file. It's read entirely in your browser and never
+            leaves your device.
+          </p>
+          <label for="icsFileInput" class="ics-upload-area">
+            <span class="ics-upload-icon" aria-hidden="true">📅</span>
+            <span class="ics-upload-text">
+              <strong>Choose a .ics calendar file</strong>
+              <small>Exported from Apple Calendar, Samsung Calendar, Outlook, Google Calendar, Moodle, and more</small>
+            </span>
+            <input type="file" id="icsFileInput" accept=".ics,text/calendar" />
+          </label>
+          <p class="ics-status" id="icsStatus" aria-live="polite"></p>
+        </div>
+
+        <p class="calendar-disclaimer">
+          Google Calendar and Notion above are a preview of the experience — no real account is connected
+          and no data is sent anywhere. Manually added events and the .ics upload are fully functional and
+          processed locally in this browser — nothing is saved once you leave the page.
+        </p>
+      </div>
+    </section>
+
     <!-- ============ MOCK APP PREVIEW / DEMO ============ -->
     <section id="demo" class="section demo-section">
       <div class="container">
@@ -481,6 +610,7 @@
         <a href="#features">Features</a>
         <a href="#how-it-works">How It Works</a>
         <a href="#storyboard">Storyboard</a>
+        <a href="#calendars">Calendars</a>
         <a href="#demo">Demo</a>
         <a href="#why-different">Why TimeWise</a>
       </nav>
@@ -491,5 +621,18 @@
   </footer>
 
   <script src="script.js"></script>
+
+  <!--
+    Cloudflare Web Analytics — free, cookie-free page-view tracking (no consent
+    banner needed). This snippet is a placeholder: it won't send real data until
+    you swap in your own token.
+
+    To get one: Cloudflare dashboard → Analytics & Logs → Web Analytics →
+    "Add a site" → enter this site's hostname → Cloudflare gives you a snippet
+    with a real token in it. Copy that whole <script> tag in place of this one
+    (same spot works whether you deploy to Cloudflare or GitHub Pages — this is
+    just a JS beacon, not something that requires being proxied through Cloudflare).
+  -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "YOUR_CLOUDFLARE_WEB_ANALYTICS_TOKEN"}'></script>
 </body>
 </html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page Not Found — TimeWise</title>
+  <meta name="robots" content="noindex" />
+
+  <!-- Favicon (SVG for modern browsers, .ico fallback for older ones) -->
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="alternate icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
+  <!-- Friendly rounded font, with solid system-font fallback if offline -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="not-found">
+    <div class="not-found-inner">
+      <div class="not-found-emoji" aria-hidden="true">⏳</div>
+      <h1>This page hasn't found its <span class="text-gradient">place in the schedule.</span></h1>
+      <p>
+        The page you're looking for doesn't exist — maybe it moved, maybe the link's a little off.
+        No stress, let's get you back on track.
+      </p>
+      <div class="not-found-actions">
+        <a href="index.html" class="btn btn-primary btn-large">Back to TimeWise</a>
+        <a href="index.html#demo" class="btn btn-secondary btn-large">Try the Demo</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Same Cloudflare Web Analytics beacon as index.html — see the comment there. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "YOUR_CLOUDFLARE_WEB_ANALYTICS_TOKEN"}'></script>
+</body>
+</html>

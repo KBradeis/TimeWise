@@ -436,6 +436,272 @@
     });
   }
 
+  /* ---------- 10. Connect Your Calendars ----------
+     Google Calendar / Notion buttons are a UI preview only — clicking them
+     never contacts a real account or server, it just simulates the
+     experience with clearly-labeled sample data. The .ics file upload
+     below is fully functional: it reads and parses the file entirely in
+     the browser using the File API, and nothing is ever uploaded anywhere. */
+  const providerButtons = document.querySelectorAll(".provider-btn");
+  const providerStatusGrid = document.getElementById("providerStatusGrid");
+
+  function addDays(date, days) {
+    var result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+
+  function formatSampleDate(date, hour, minute) {
+    var d = new Date(date);
+    d.setHours(hour, minute, 0, 0);
+    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) +
+      " · " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+
+  var PROVIDER_SAMPLE_EVENTS = {
+    google: function () {
+      var tomorrow = addDays(new Date(), 1);
+      var inTwoDays = addDays(new Date(), 2);
+      return [
+        "BIO 201 Lecture — " + formatSampleDate(tomorrow, 10, 0),
+        "Shift at Campus Café — " + formatSampleDate(tomorrow, 14, 0),
+        "Study Group: Calc II — " + formatSampleDate(inTwoDays, 18, 0)
+      ];
+    },
+    notion: function () {
+      return [
+        "Draft essay outline",
+        "Club officer meeting notes due",
+        "Apply to summer internship — due Friday"
+      ];
+    }
+  };
+
+  providerButtons.forEach(function (btn) {
+    // Remember the button's original label so disconnecting can restore it
+    btn.dataset.originalHtml = btn.innerHTML;
+
+    btn.addEventListener("click", function () {
+      var provider = btn.getAttribute("data-provider");
+      var label = btn.getAttribute("data-label");
+      var existingCard = document.getElementById("providerCard-" + provider);
+
+      // Clicking a connected button disconnects it again
+      if (btn.classList.contains("is-connected")) {
+        btn.classList.remove("is-connected");
+        btn.innerHTML = btn.dataset.originalHtml;
+        if (existingCard) existingCard.remove();
+        return;
+      }
+
+      if (btn.disabled) return;
+
+      btn.disabled = true;
+      btn.innerHTML = "Connecting…";
+
+      setTimeout(function () {
+        btn.disabled = false;
+        btn.classList.add("is-connected");
+        btn.innerHTML = "✓ Connected — " + label;
+
+        var events = PROVIDER_SAMPLE_EVENTS[provider] ? PROVIDER_SAMPLE_EVENTS[provider]() : [];
+        var card = document.createElement("div");
+        card.className = "provider-sample-card";
+        card.id = "providerCard-" + provider;
+
+        var title = document.createElement("div");
+        title.className = "provider-sample-title";
+        title.innerHTML = label + ' <span class="demo-badge">Demo</span>';
+        card.appendChild(title);
+
+        var ul = document.createElement("ul");
+        events.forEach(function (text) {
+          var li = document.createElement("li");
+          li.textContent = text;
+          ul.appendChild(li);
+        });
+        card.appendChild(ul);
+
+        if (providerStatusGrid) providerStatusGrid.appendChild(card);
+      }, 900);
+    });
+  });
+
+  /* ---------- 11. Calendar file (.ics) upload — real, client-side only ---------- */
+  const icsFileInput = document.getElementById("icsFileInput");
+  const icsStatus = document.getElementById("icsStatus");
+  const calendarEventsPreview = document.getElementById("calendarEventsPreview");
+  const calendarEventsList = document.getElementById("calendarEventsList");
+
+  var MAX_ICS_SIZE = 2 * 1024 * 1024; // 2MB is plenty for a calendar export
+
+  function unescapeIcsText(value) {
+    return value
+      .replace(/\\n/gi, "\n")
+      .replace(/\\,/g, ",")
+      .replace(/\\;/g, ";")
+      .replace(/\\\\/g, "\\");
+  }
+
+  function parseIcsDate(raw) {
+    // raw looks like "20260925T140000Z", "20260925T140000", or "20260925"
+    var isUtc = /Z$/.test(raw);
+    var datePart = raw.slice(0, 8);
+    var year = Number(datePart.slice(0, 4));
+    var month = Number(datePart.slice(4, 6)) - 1;
+    var day = Number(datePart.slice(6, 8));
+
+    if (raw.length <= 8) {
+      return { date: new Date(year, month, day), allDay: true };
+    }
+
+    var timePart = raw.slice(9, 15);
+    var hour = Number(timePart.slice(0, 2)) || 0;
+    var minute = Number(timePart.slice(2, 4)) || 0;
+    var second = Number(timePart.slice(4, 6)) || 0;
+
+    var date = isUtc
+      ? new Date(Date.UTC(year, month, day, hour, minute, second))
+      : new Date(year, month, day, hour, minute, second);
+
+    return { date: date, allDay: false };
+  }
+
+  function parseIcs(text) {
+    // Unfold wrapped lines: a continuation line starts with a space or tab (RFC 5545)
+    var rawLines = text.split(/\r\n|\n|\r/);
+    var lines = [];
+    rawLines.forEach(function (line) {
+      if ((line.charAt(0) === " " || line.charAt(0) === "\t") && lines.length > 0) {
+        lines[lines.length - 1] += line.slice(1);
+      } else {
+        lines.push(line);
+      }
+    });
+
+    var events = [];
+    var current = null;
+
+    lines.forEach(function (line) {
+      if (line === "BEGIN:VEVENT") {
+        current = { title: "Untitled event", start: null, allDay: false, location: "" };
+        return;
+      }
+      if (line === "END:VEVENT") {
+        if (current && current.start) events.push(current);
+        current = null;
+        return;
+      }
+      if (!current) return;
+
+      var colonIndex = line.indexOf(":");
+      if (colonIndex === -1) return;
+      var propRaw = line.slice(0, colonIndex);
+      var value = line.slice(colonIndex + 1);
+      var prop = propRaw.split(";")[0].toUpperCase();
+
+      if (prop === "SUMMARY") {
+        current.title = unescapeIcsText(value) || "Untitled event";
+      } else if (prop === "DTSTART") {
+        var parsed = parseIcsDate(value);
+        current.start = parsed.date;
+        current.allDay = parsed.allDay;
+      } else if (prop === "LOCATION") {
+        current.location = unescapeIcsText(value);
+      }
+    });
+
+    events.sort(function (a, b) {
+      return a.start - b.start;
+    });
+
+    return events;
+  }
+
+  function formatEventDate(event) {
+    var datePart = event.start.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    if (event.allDay) return datePart + " · All day";
+    return datePart + " · " + event.start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+
+  function renderIcsEvents(upcomingEvents, totalParsed) {
+    if (!calendarEventsList || !icsStatus || !calendarEventsPreview) return;
+    calendarEventsList.innerHTML = "";
+
+    if (totalParsed === 0) {
+      icsStatus.textContent = "Couldn't find any events in that file.";
+      icsStatus.className = "ics-status is-error";
+      calendarEventsPreview.hidden = true;
+      return;
+    }
+
+    if (upcomingEvents.length === 0) {
+      icsStatus.textContent = "Found " + totalParsed + " event" + (totalParsed === 1 ? "" : "s") +
+        " in that file, but none of them are upcoming.";
+      icsStatus.className = "ics-status is-success";
+      calendarEventsPreview.hidden = true;
+      return;
+    }
+
+    upcomingEvents.slice(0, 25).forEach(function (event) {
+      var li = document.createElement("li");
+
+      var title = document.createElement("span");
+      title.className = "calendar-event-title";
+      title.textContent = event.title;
+
+      var time = document.createElement("span");
+      time.className = "calendar-event-time";
+      time.textContent = formatEventDate(event) + (event.location ? " · " + event.location : "");
+
+      li.appendChild(title);
+      li.appendChild(time);
+      calendarEventsList.appendChild(li);
+    });
+
+    icsStatus.textContent = "Found " + upcomingEvents.length + " upcoming event" +
+      (upcomingEvents.length === 1 ? "" : "s") + ".";
+    icsStatus.className = "ics-status is-success";
+    calendarEventsPreview.hidden = false;
+  }
+
+  if (icsFileInput) {
+    icsFileInput.addEventListener("change", function () {
+      var file = icsFileInput.files && icsFileInput.files[0];
+      if (!file) return;
+
+      if (file.size > MAX_ICS_SIZE) {
+        icsStatus.textContent = "That file is a bit large for the demo — try a smaller export.";
+        icsStatus.className = "ics-status is-error";
+        return;
+      }
+
+      icsStatus.textContent = "Reading your calendar…";
+      icsStatus.className = "ics-status";
+
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var allEvents = parseIcs(String(reader.result));
+          var now = new Date();
+          var upcoming = allEvents.filter(function (event) {
+            return event.start >= now;
+          });
+          renderIcsEvents(upcoming, allEvents.length);
+        } catch (err) {
+          icsStatus.textContent = "Couldn't read that file — make sure it's a .ics calendar export.";
+          icsStatus.className = "ics-status is-error";
+          calendarEventsPreview.hidden = true;
+        }
+      };
+      reader.onerror = function () {
+        icsStatus.textContent = "Couldn't read that file. Please try again.";
+        icsStatus.className = "ics-status is-error";
+      };
+      reader.readAsText(file);
+    });
+  }
+
   // Initial paint
   renderHome();
   showScreen("home");
