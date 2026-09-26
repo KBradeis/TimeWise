@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>TimeWise Results</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <!--
+    Private results page for the early-access form and demo usage counts.
+    It's publicly reachable but shows nothing without the ADMIN_KEY secret
+    (set with `npx wrangler secret put ADMIN_KEY`). Data comes from the
+    Worker's GET /api/waitlist/results. See README → "Early access & results".
+  -->
+  <style>
+    body { background: var(--bg); }
+    .results-wrap { max-width: 980px; margin: 0 auto; padding: 40px 24px 80px; }
+    .results-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+    .results-head h1 { font-size: clamp(1.6rem, 3vw, 2.1rem); }
+    .results-head p { color: var(--text-muted); font-size: 0.92rem; }
+    .results-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 24px; margin-bottom: 20px; }
+    .results-card h2 { font-size: 1.2rem; margin-bottom: 4px; }
+    .results-card .sub { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px; }
+    .key-form { max-width: 420px; margin: 60px auto; }
+    .key-form .quick-add-field { margin: 16px 0; }
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px 18px; }
+    .kpi-value { font-family: var(--font-heading); font-weight: 800; font-size: 2.1rem; line-height: 1.1; color: var(--text); }
+    .kpi-label { font-weight: 700; font-size: 0.85rem; color: var(--text); }
+    .kpi-note { font-size: 0.78rem; color: var(--text-muted); }
+    .grid-2col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    .grid-2col .results-card { margin-bottom: 0; }
+    .bars { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; border-radius: 8px; padding: 2px 4px; margin: 0 -4px; }
+    .bar-row:hover { background: var(--bg-alt); }
+    .bar-label { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+    .bar-value { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .bar-track { grid-column: 1 / -1; height: 10px; border-radius: 4px; background: var(--bg-alt); overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 0 4px 4px 0; background: var(--purple); min-width: 2px; }
+    .bar-fill.is-zero { background: transparent; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+    td.muted { color: var(--text-muted); }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
+    .empty-note { color: var(--text-muted); font-style: italic; font-size: 0.9rem; }
+    @media (max-width: 760px) {
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-2col { grid-template-columns: 1fr; }
+      .results-wrap { padding: 28px 16px 60px; }
+      .results-card { padding: 18px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="results-wrap">
+    <form class="results-card key-form" id="keyForm">
+      <h1 class="calendar-panel-heading" style="font-size:1.4rem">⏳ TimeWise results</h1>
+      <p class="sub">Enter the admin key you set with <code>wrangler secret put ADMIN_KEY</code>.</p>
+      <label class="quick-add-field">
+        <span>Admin key</span>
+        <input type="password" id="keyInput" autocomplete="current-password" required />
+      </label>
+      <button type="submit" class="btn btn-primary btn-full">Show results</button>
+      <p class="ics-status" id="keyStatus" aria-live="polite"></p>
+    </form>
+
+    <div id="results" hidden>
+      <div class="results-head">
+        <div>
+          <h1>⏳ TimeWise results</h1>
+          <p id="updatedAt"></p>
+        </div>
+        <div class="toolbar">
+          <button type="button" class="btn btn-secondary btn-small" id="refreshBtn">Refresh</button>
+          <button type="button" class="btn btn-primary btn-small" id="csvBtn">Download CSV</button>
+        </div>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+
+      <section class="results-card">
+        <h2>What visitors tried</h2>
+        <p class="sub">Share of unique visitors who used each demo feature at least once.</p>
+        <ul class="bars" id="featureBars"></ul>
+      </section>
+
+      <div class="grid-2col" style="margin-bottom:20px">
+        <section class="results-card">
+          <h2>How they plan today</h2>
+          <p class="sub" id="planningSub"></p>
+          <ul class="bars" id="planningBars"></ul>
+        </section>
+        <section class="results-card">
+          <h2>Biggest time struggle</h2>
+          <p class="sub" id="struggleSub"></p>
+          <ul class="bars" id="struggleBars"></ul>
+        </section>
+      </div>
+
+      <section class="results-card">
+        <h2>Would they use it every week?</h2>
+        <p class="sub" id="weeklySub"></p>
+        <ul class="bars" id="weeklyBars"></ul>
+      </section>
+
+      <section class="results-card">
+        <h2>All responses</h2>
+        <p class="sub">Newest first. The CSV download includes everything shown here.</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>When (UTC)</th><th>Email</th><th>Plans with</th><th>Struggle</th><th>Weekly?</th></tr></thead>
+            <tbody id="responsesBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+  (function () {
+    "use strict";
+    var FEATURES = [
+      ["calendar_google", "Connected Google Calendar"],
+      ["calendar_notion", "Connected Notion"],
+      ["calendar_ics", "Uploaded a calendar file"],
+      ["event_added", "Added an event by hand"],
+      ["replan_used", "Tried Replan my day"],
+      ["replan_applied", "Applied a replan to their week"],
+      ["reflection_viewed", "Saw a Plan vs. Reality reflection"],
+      ["reflection_step_added", "Added a suggested next step"],
+      ["quiz_completed", "Finished the practice quiz"],
+      ["waitlist_joined", "Answered the early-access form"]
+    ];
+    var KEY_STORE = "timewise-admin-key";
+    var data = null;
+    var key = "";
+
+    var $ = function (id) { return document.getElementById(id); };
+
+    function pct(n, d) { return d ? Math.round((n / d) * 100) : 0; }
+
+    function renderBars(el, rows, total, unit) {
+      el.innerHTML = "";
+      if (!total) {
+        var li = document.createElement("li");
+        li.className = "empty-note";
+        li.textContent = "No responses yet.";
+        el.appendChild(li);
+        return;
+      }
+      rows.forEach(function (row) {
+        var li = document.createElement("li");
+        li.className = "bar-row";
+        var share = pct(row[1], total);
+        li.title = row[0] + ": " + row[1] + " " + unit + " (" + share + "%)";
+        var label = document.createElement("span");
+        label.className = "bar-label";
+        label.textContent = row[0];
+        var value = document.createElement("span");
+        value.className = "bar-value";
+        value.textContent = share + "%  ·  " + row[1];
+        var track = document.createElement("span");
+        track.className = "bar-track";
+        track.setAttribute("aria-hidden", "true");
+        var fill = document.createElement("span");
+        fill.className = "bar-fill" + (row[1] ? "" : " is-zero");
+        fill.style.display = "block";
+        fill.style.width = share + "%";
+        track.appendChild(fill);
+        li.appendChild(label);
+        li.appendChild(value);
+        li.appendChild(track);
+        el.appendChild(li);
+      });
+    }
+
+    function kpi(value, label, note) {
+      var d = document.createElement("div");
+      d.className = "kpi";
+      var v = document.createElement("div"); v.className = "kpi-value"; v.textContent = value;
+      var l = document.createElement("div"); l.className = "kpi-label"; l.textContent = label;
+      var n = document.createElement("div"); n.className = "kpi-note"; n.textContent = note || "";
+      d.appendChild(v); d.appendChild(l); d.appendChild(n);
+      return d;
+    }
+
+    function tally(question) {
+      var answered = data.signups.filter(function (s) { return s[question]; });
+      var rows = data.survey[question].map(function (option) {
+        return [option, answered.filter(function (s) { return s[question] === option; }).length];
+      });
+      return { rows: rows, total: answered.length };
+    }
+
+    function render() {
+      var s = data.signups;
+      var emails = {};
+      s.forEach(function (row) { if (row.email) emails[row.email] = true; });
+      var emailCount = Object.keys(emails).length;
+      var weekly = tally("weekly");
+      var yes = weekly.rows[0][1] + weekly.rows[1][1];
+
+      var kpis = $("kpis");
+      kpis.innerHTML = "";
+      kpis.appendChild(kpi(data.visitors, "Unique visitors", "since tracking started"));
+      var tried = data.visitorsWhoTriedDemo || 0;
+      kpis.appendChild(kpi(tried, "Tried a demo feature", pct(tried, data.visitors) + "% of visitors"));
+      kpis.appendChild(kpi(s.length, "Form responses", emailCount + " left an email"));
+      kpis.appendChild(kpi(weekly.total ? pct(yes, weekly.total) + "%" : "—", "Would use it weekly", "“Definitely” + “Probably”"));
+
+      renderBars($("featureBars"), FEATURES.map(function (f) { return [f[1], data.events[f[0]] || 0]; }), data.visitors, "visitors");
+      ["planning", "struggle", "weekly"].forEach(function (q) {
+        var t = tally(q);
+        $(q + "Sub").textContent = t.total + " answer" + (t.total === 1 ? "" : "s");
+        renderBars($(q + "Bars"), t.rows, t.total, "people");
+      });
+
+      var body = $("responsesBody");
+      body.innerHTML = "";
+      if (!s.length) {
+        var tr = document.createElement("tr");
+        var td = document.createElement("td");
+        td.colSpan = 5; td.className = "empty-note"; td.textContent = "No responses yet — share the site link!";
+        tr.appendChild(td); body.appendChild(tr);
+      }
+      s.forEach(function (row) {
+        var tr = document.createElement("tr");
+        [row.updated_at || row.created_at, row.email, row.planning, row.struggle, row.weekly].forEach(function (value) {
+          var td = document.createElement("td");
+          td.textContent = value || "—";
+          if (!value) td.className = "muted";
+          tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      });
+
+      $("updatedAt").textContent = "Updated " + new Date().toLocaleString() + " · " +
+        data.signupsWhoTriedDemo + " of " + s.length + " respondents also tried the demo";
+    }
+
+    function load() {
+      $("keyStatus").textContent = "Loading…";
+      $("keyStatus").className = "ics-status";
+      return fetch("/api/waitlist/results", { headers: { Authorization: "Bearer " + key } })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (body) {
+            if (!res.ok) throw new Error(body.error || "status_" + res.status);
+            return body;
+          });
+        })
+        .then(function (body) {
+          data = body;
+          try { sessionStorage.setItem(KEY_STORE, key); } catch (e) { /* fine */ }
+          $("keyForm").hidden = true;
+          $("results").hidden = false;
+          render();
+        })
+        .catch(function (err) {
+          var messages = {
+            unauthorized: "That key didn't match. Check the ADMIN_KEY you set in Cloudflare.",
+            no_admin_key: "No ADMIN_KEY is set yet. Run: npx wrangler secret put ADMIN_KEY",
+            not_configured: "The database isn't connected yet — see README → Early access & results."
+          };
+          $("keyForm").hidden = false;
+          $("results").hidden = true;
+          $("keyStatus").textContent = messages[err.message] || "Couldn't load results (" + err.message + "). This page only works on the live Cloudflare site.";
+          $("keyStatus").className = "ics-status is-error";
+        });
+    }
+
+    function csvCell(value) {
+      var v = value == null ? "" : String(value);
+      if (/^[=+\-@]/.test(v)) v = "'" + v; // keep spreadsheet apps from running formulas
+      return '"' + v.replace(/"/g, '""') + '"';
+    }
+
+    $("keyForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      key = $("keyInput").value.trim();
+      load();
+    });
+    $("refreshBtn").addEventListener("click", load);
+    $("csvBtn").addEventListener("click", function () {
+      if (!data) return;
+      var lines = [["created_at", "updated_at", "email", "planning", "struggle", "weekly"].join(",")];
+      data.signups.forEach(function (s) {
+        lines.push([s.created_at, s.updated_at, s.email, s.planning, s.struggle, s.weekly].map(csvCell).join(","));
+      });
+      var blob = new Blob([lines.join("\n")], { type: "text/csv" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "timewise-responses.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+
+    try { key = sessionStorage.getItem(KEY_STORE) || ""; } catch (e) { key = ""; }
+    if (key) load(); else $("keyStatus").textContent = "";
+  })();
+  </script>
+</body>
+</html>

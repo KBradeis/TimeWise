@@ -22,12 +22,12 @@ tracker.
   screen for when things change, and an end-of-day reflection screen
 - **Connect Your Calendars** — the pitch's centerpiece interactive demo: a live "Your Week" grid (Monday
   through Sunday, with today highlighted) that three different input methods all feed into — type in an
-  event by hand, click "Connect Google Calendar" / "Connect Notion" to drop in clearly-labeled sample data
-  (no real account is ever linked), or upload a genuinely real **.ics calendar file** (from Apple Calendar,
-  Samsung Calendar, Outlook, Moodle, Google Calendar, etc.), parsed entirely in the browser. It's meant to
-  make the product's core promise tangible: however your schedule is scattered today, TimeWise pulls it
-  into one calm view. Nothing is ever sent to a server; see
-  [Calendar linking](#calendar-linking-how-real-is-it) below for the full picture.
+  event by hand, connect a real **Google Calendar** or **Notion** workspace (read-only), or upload a real
+  **.ics calendar file** (from Apple Calendar, Samsung Calendar, Outlook, Moodle, etc.), parsed entirely
+  in the browser. It's meant to make the product's core promise tangible: however your schedule is
+  scattered today, TimeWise pulls it into one calm view. The Google and Notion connections need a
+  one-time setup; see
+  [Calendar linking](#calendar-linking-how-it-works) below for the full picture.
 - **Plan vs. Reality** — the minimum viable feature that shows what makes TimeWise different. It reads
   the same "Your Week" events as the calendar section: pick a day, mark each block as *Done*, *Ran over*
   (by how much), *Swapped*, or *Skipped* (and optionally what got in the way), and TimeWise returns a
@@ -36,6 +36,18 @@ tracker.
   (it shows up in green as a "TimeWise suggestion"). A **Try Maya's example** button fills in realistic
   answers so it can be demoed in one click. Reflections come from simple, transparent rules in
   `buildReflection()` in `script.js` — no AI service, no server, nothing saved.
+- **Replan my day** — Storyboard Screen 3, working. Pick a day and the current time, say how far behind
+  you're running and whether something new came up, and choose a "stop working by" time. TimeWise keeps
+  fixed commitments (classes, shifts, meetings — tap any block to switch it between 📌 fixed and ↔ can
+  move), fits everything movable into the gaps with a 10-minute breather after each, warns if you'll be
+  late to something fixed, and moves what won't fit to the next day's first free slot. **Apply to my
+  week** updates the grid. **Try Maya's messy Monday** runs a one-click example.
+- **Early access** — the closing section is now a sign-up form: an optional email plus three one-tap
+  questions (how you plan today, biggest time struggle, would you use it weekly). Responses are saved in
+  a Cloudflare D1 database by `worker.js`. The site also counts anonymously which demo features each
+  visitor tried. A private **`results.html`** page (protected by an admin key) shows the numbers as
+  charts, lists every response, and exports a CSV for your pitch slides. See
+  [Early access & results](#early-access--results).
 - **Live demo** — a fully working mock-up of the practice experience: a phone-style card with a
   home screen, a 10-question practice session (one question at a time, multiple choice,
   immediate supportive feedback, live score/streak/XP/progress bar), and a session summary with
@@ -56,6 +68,7 @@ tracker.
 ```
 TimeWise/
 ├── index.html               # Page structure and content (semantic HTML5)
+├── results.html             # Private results page for early-access answers + feature counts (needs ADMIN_KEY)
 ├── 404.html                 # Custom "page not found" page (Cloudflare + GitHub Pages)
 ├── styles.css                # All styling: layout, color system, responsive rules
 ├── script.js                 # Demo interactivity: quiz logic, stats, calendar features, localStorage
@@ -64,6 +77,7 @@ TimeWise/
 │   ├── favicon.svg            # Primary SVG clock-mark favicon (modern browsers)
 │   ├── apple-touch-icon.png   # 180×180 home-screen icon (iOS/iPadOS)
 │   └── og-image.jpg           # 1200×630 branded image for social link previews
+├── worker.js                  # Cloudflare Worker: serves the site + the real Notion connection (/api/notion/*)
 ├── wrangler.json              # Cloudflare Workers config (static-asset deployment + custom 404)
 ├── package.json               # Optional: adds the `wrangler` CLI as a dev dependency
 ├── .assetsignore               # Files Cloudflare shouldn't publish (README, config, etc.)
@@ -221,40 +235,156 @@ would need a heavier tool like Google Analytics.
    line near the bottom of **both** `index.html` and `404.html` (so 404 hits get counted too).
 5. Give it a few minutes after your next deploy — data shows up in the same dashboard page.
 
-## Calendar linking: how real is it?
+## Calendar linking: how it works
 
-The "Connect Your Calendars" section is intentionally split into different levels of realness, and
-all of them feed the same live "Your Week" grid — it says so on the page itself:
+Every input in the "Connect Your Calendars" section feeds the same live "Your Week" grid (and Plan
+vs. Reality below it). All of it is read-only and only looks at the current Monday–Sunday week.
 
-- **Adding an event by hand is fully functional.** The quick-add form writes straight into the
-  in-memory `weekEvents` array (see `script.js`) and re-renders the grid — nothing is sent
-  anywhere, and nothing persists once you leave the page.
-- **Google Calendar and Notion** are a **preview only**. Clicking "Connect" never opens a real
-  sign-in flow, never asks for real credentials, and never talks to Google or Notion's servers —
-  it just drops clearly-labeled sample events onto the grid (and removes them again if you
-  disconnect) to simulate what the connected state would look like. A real version of this would
-  need OAuth (which needs a small backend to exchange tokens securely — Cloudflare Workers would
-  be a natural fit alongside this site) and, for Google specifically, passing Google's
-  app-verification review before it could work for more than a small list of test users.
-- **The `.ics` calendar file upload is fully functional.** It reads whatever file you choose with
-  the browser's File API and parses it entirely client-side (see the `parseIcs()` function in
-  `script.js`), then drops any events that fall in the current Monday–Sunday window onto the grid
-  — nothing is uploaded anywhere. This is also the most realistic way to cover calendars that
-  don't offer a public API a website can connect to directly: Apple Calendar, Samsung Calendar,
-  Outlook, and **Moodle** all export (or let you subscribe to) a standard `.ics` file. Moodle in
-  particular has a built-in, self-serve calendar export a student can generate from their own
-  account (no institutional/admin setup needed) — export it, then upload it here.
+- **Adding an event by hand** writes straight into the in-memory `weekEvents` array in `script.js`.
+  Nothing is sent anywhere, and nothing persists once you leave the page.
+- **Google Calendar is a real connection** that runs entirely in the visitor's browser (Google
+  Identity Services + the Calendar API). The site only needs a public OAuth *Client ID*, not a
+  secret, so no server is involved. See [Connecting Google Calendar](#connecting-google-calendar).
+- **Notion is a real connection** that goes through the small Cloudflare Worker in `worker.js`.
+  Notion's API can't be called from a browser, and its sign-in needs a client secret, so those two
+  steps run on the server. Each visitor connects *their own* workspace and chooses which pages to
+  share on Notion's screen. Their Notion token is kept only in a secure, HttpOnly cookie in their own
+  browser for 7 days; the Worker stores nothing. See [Connecting Notion](#connecting-notion).
+- **The `.ics` upload** reads a calendar export with the browser's File API and parses it
+  client-side (`parseIcs()` in `script.js`). It covers calendars without a web API (Apple Calendar,
+  Samsung Calendar, Outlook, Moodle).
+- **Fallback:** if a connection isn't set up on a copy of the site (no Google Client ID yet, no
+  Notion secrets, or the site is on GitHub Pages / opened as a local file, where the Worker doesn't
+  run), that button quietly falls back to the old preview and adds clearly labeled "Demo" sample
+  events, so the page never looks broken.
 
-### Could this connect directly to Moodle (or Google/Notion) with no manual export/upload step?
+When real events arrive from any connection, Maya's sample week is cleared automatically so the
+grid shows only your schedule.
 
-Not without a backend, and for Moodle specifically, not without the school's IT department getting
-involved. Moodle's Web Services REST API and LTI integrations can expose course, grade, or calendar
-data automatically, but a site administrator has to enable web services and grant the relevant
-permissions first — a student can't turn that on themselves. Google and Notion have a similar
-story: a live connection needs OAuth, which needs a backend to hold the client secret and exchange
-tokens (a static site can't do this on its own). The `.ics` upload sidesteps all of that by using
-a feature every one of these platforms already offers self-serve — at the cost of being a manual
-"export, then upload" step rather than an always-live sync.
+### Connecting Google Calendar
+
+About 15 minutes, once. You need a Google account and the site's live address (for example
+`https://timewise.<your-subdomain>.workers.dev`).
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com/) and create a project
+   (e.g. "TimeWise").
+2. **APIs & Services → Library** → search **Google Calendar API** → **Enable**.
+3. **Google Auth Platform** (called **OAuth consent screen** in older menus) → **Get started**:
+   app name "TimeWise", your email as support/contact email, audience **External**.
+4. **Data Access** → **Add or remove scopes** → add
+   `https://www.googleapis.com/auth/calendar.readonly` → **Save**.
+5. **Audience** → **Test users** → add the Google accounts that should be able to connect (yours
+   and your classmates', up to 100). While the app is in "Testing", only these accounts can sign in.
+6. **Clients** → **Create client** → type **Web application**. Under **Authorized JavaScript
+   origins**, add your site's exact address (no trailing slash). You don't need a redirect URI.
+7. Copy the **Client ID** (it ends in `.apps.googleusercontent.com`) and paste it into
+   `GOOGLE_CLIENT_ID` near the top of section 12 in `script.js`. Then commit and deploy.
+
+When you click **Connect Google Calendar**, a Google pop-up asks you to pick an account. It shows
+"Google hasn't verified this app": click **Continue**, since it's your own test app. Tick the
+calendar permission box. TimeWise then loads this week's events from every calendar that's ticked
+in your Google Calendar sidebar (up to 10), with repeating events expanded. Access lasts about an
+hour; after that, just click Connect again.
+
+> **School accounts:** if your university's Google Workspace blocks unverified third-party apps,
+> sign in with a personal Gmail account instead (and add that one as a test user).
+
+### Connecting Notion
+
+About 20 minutes, once. This needs the Cloudflare deployment (see [Deploying to
+Cloudflare](#deploying-to-cloudflare)), since that's where `worker.js` runs.
+
+1. Go to Notion's integrations page ([notion.so/profile/integrations](https://www.notion.so/profile/integrations))
+   → **New integration**. Choose type **Public** (so visitors can connect their own workspaces).
+2. Fill in the required details. For the website, privacy policy, and terms URLs, your site's
+   address is fine for a class demo.
+3. Under **Redirect URIs**, add exactly: `https://<your-site-address>/api/notion/callback`
+4. Under **Capabilities**, keep only **Read content**. You don't need update/insert or user email.
+5. Save, then copy the **OAuth client ID** and **OAuth client secret**.
+6. In this folder, store them as Cloudflare secrets. They're never committed to git:
+   ```bash
+   npx wrangler secret put NOTION_CLIENT_ID
+   npx wrangler secret put NOTION_CLIENT_SECRET
+   ```
+7. Deploy: `npm run deploy`.
+
+When you click **Connect Notion**, a pop-up opens Notion's screen, where you pick the pages or
+databases TimeWise may read. **Choose a database that has a Date property**, such as an assignment
+tracker or task list. The pop-up closes itself, and items dated this week show up on the grid.
+Items with only a date (no time) show as "All day" and aren't part of Plan vs. Reality, which only
+looks at blocks with a time.
+
+Details: TimeWise reads up to 10 shared databases, uses the first Date property in each, and asks
+Notion's API (version `2022-06-28`) only for items dated within this week. Disconnecting clears the
+cookie. To fully revoke access, remove the integration under **Settings → Connections** in Notion.
+
+**Testing Notion locally** (optional): create a `.dev.vars` file in this folder (`.gitignore` keeps it out of
+git and `.assetsignore` keeps it off the published site) containing
+`NOTION_CLIENT_ID=...` and `NOTION_CLIENT_SECRET=...`, add `http://localhost:8787/api/notion/callback`
+as a second redirect URI in Notion, and run `npm run dev`.
+
+### Could this connect directly to Moodle with no manual export/upload step?
+
+Not without the school's IT department. Moodle's Web Services API can expose calendar data, but a
+site administrator has to turn on web services and grant permissions first, which a student can't do.
+The `.ics` upload sidesteps that by using Moodle's built-in, self-serve calendar export.
+
+## Early access & results
+
+The early-access form and the anonymous feature counts are saved in a free **Cloudflare D1** database
+through `worker.js`. They only work on the Cloudflare deployment. On GitHub Pages or a local file, the
+form says sign-ups only work on the live site, and feature counting quietly does nothing.
+
+### One-time setup (about 5 minutes)
+
+Run these in this folder:
+
+1. **Create the database:**
+   ```bash
+   npx wrangler d1 create timewise
+   ```
+   If Wrangler offers to add it to your config, say **yes** and use `DB` as the binding name.
+   Otherwise, paste the block it prints into `wrangler.json` (inside the top-level `{ }`), making
+   sure the binding is `DB`:
+   ```json
+   "d1_databases": [
+     { "binding": "DB", "database_name": "timewise", "database_id": "<the id it printed>" }
+   ]
+   ```
+   You don't need to create any tables. `worker.js` creates them automatically on first use.
+2. **Choose a password for the results page:**
+   ```bash
+   npx wrangler secret put ADMIN_KEY
+   ```
+   Type a long, random password when asked. It's stored in Cloudflare, never in git.
+3. **Deploy:** `npm run deploy`
+
+### Reading the results
+
+Open `https://<your-site>/results.html` and enter your `ADMIN_KEY`. You'll see:
+
+- **Headline numbers:** unique visitors, how many tried a demo feature, form responses (and how many
+  left an email), and the share who'd use TimeWise weekly ("Definitely" + "Probably").
+- **What visitors tried:** the share of visitors who used each feature (connected a calendar, used
+  Replan, saw a reflection, finished the quiz, and so on).
+- **Answer breakdowns** for each survey question.
+- **Every response**, newest first, with a **Download CSV** button.
+
+The page is reachable by anyone, but it shows nothing without the key, and it's marked `noindex`.
+
+### What gets stored, and privacy
+
+- **Sign-ups:** an optional email plus the three answers, keyed to a random visitor ID. The same browser
+  answering again updates its row instead of adding a new one.
+- **Feature counts:** only "visitor X used feature Y at least once," using a random ID kept in that
+  browser's `localStorage`. No names, IP addresses, cookies, or calendar contents are stored.
+- A hidden "honeypot" field quietly drops most spam bots.
+- The form's small print tells visitors about both. If you add new survey options, update **both** the
+  radio buttons in `index.html` and the `SURVEY` list at the top of the early-access section in
+  `worker.js`. Answers that don't match are stored as blank.
+
+To wipe the data (for example, after testing), run:
+`npx wrangler d1 execute timewise --remote --command "DELETE FROM signups; DELETE FROM events;"`
 
 ## Design choices
 
@@ -288,9 +418,11 @@ a feature every one of these platforms already offers self-serve — at the cost
   `feedback` message.
 - Colors and spacing live as CSS custom properties at the top of `styles.css` (`:root`), so a
   palette change is mostly a matter of editing a handful of variables.
-- The Google/Notion demo sample events live in `PROVIDER_SAMPLE_EVENTS` in `script.js` — each entry
-  is `{ dayIndex, title, startMinutes, endMinutes, category }`, where `category` is `"class"`,
+- The Google/Notion *fallback* sample events (used only when a real connection isn't set up) live in
+  `PROVIDER_SAMPLE_EVENTS` in `script.js` — each entry is `{ dayIndex, title, startMinutes, endMinutes, category }`, where `category` is `"class"`,
   `"assignment"`, or `"personal"` (this controls the color of the event on the grid).
+- Replan's rules live in `buildReplan()` in `script.js` (section 15). `REPLAN_BREATHER` sets the slack
+  after each moved block, and `FIXED_KEYWORDS` decides which blocks start out as fixed.
 - The "Your Week" grid itself is driven by the `weekEvents` array in `script.js`. Add events with
   `addWeekEvent({ title, dayIndex, startMinutes, endMinutes, category, source })` (`dayIndex` 0 = Monday)
   and call `renderAll()`, which repaints both the grid and Plan vs. Reality. Maya's sample week (loaded

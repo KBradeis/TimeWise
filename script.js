@@ -3,8 +3,9 @@
    Sections: 1. Mobile nav toggle  2. Question bank  3. Local storage helpers
    4. App state  5. Screen switching  6. Home screen rendering
    7. Quiz rendering & answer handling  8. Summary rendering  9. Event wiring
-   10. Your Week grid  11. Quick add  12. Google/Notion preview
-   13. .ics upload  14. Plan vs. Reality
+   10. Your Week grid  11. Quick add  12. Google Calendar + Notion
+   13. .ics upload  14. Plan vs. Reality  15. Replan my day
+   16. Early access + anonymous feature counts
    ========================================================================== */
 
 (function () {
@@ -372,6 +373,7 @@
 
   function finishSession() {
     const total = QUESTIONS.length;
+    track("quiz_completed");
 
     // Fill the progress bar completely for a satisfying finish
     if (progressFill) progressFill.style.width = "100%";
@@ -451,7 +453,7 @@
   var DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   var DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   var CATEGORIES = ["class", "assignment", "personal", "timewise"];
-  var SOURCE_TAGS = { google: "Demo", notion: "Demo", timewise: "TimeWise" };
+  var SOURCE_TAGS = { "google-demo": "Demo", "notion-demo": "Demo", google: "Google", notion: "Notion", timewise: "TimeWise" };
   var STATUS_ICONS = { done: "✓", over: "⏱", swapped: "↷", skipped: "✕" };
   var STATUS_LABELS = { done: "Done", over: "Ran over", swapped: "Swapped", skipped: "Skipped" };
 
@@ -689,6 +691,10 @@
   function renderAll() {
     renderWeekGrid();
     renderReality();
+    // Keep an open (not yet applied) replan in sync with the grid
+    renderReplanBlocks();
+    if (replanState.plan && !replanState.applied) replanState.plan = buildReplan();
+    renderReplanResult();
   }
 
   if (weekClearBtn) {
@@ -697,6 +703,7 @@
         weekEvents = [];
         realityState.shown = {};
         realityState.added = {};
+        replanState.plan = null;
         providerButtons.forEach(resetProviderButton);
         setStatus(providerStatusNote, "", "");
         setStatus(icsStatus, "", "");
@@ -764,17 +771,37 @@
       });
       renderAll();
       setStatus(quickAddStatus, "Added “" + title + "” to " + DAY_NAMES[dayIndex] + ".", "success");
+      track("event_added");
       quickAddTitle.value = "";
       quickAddEnd.value = "";
       quickAddTitle.focus();
     });
   }
 
-  /* ---------- 12. Google Calendar / Notion — preview only ----------
-     These buttons never contact a real account or server. They drop clearly
-     labeled sample events onto the grid (and remove them on disconnect). */
+  /* ---------- 12. Google Calendar + Notion — real, read-only connections ----------
+     Google Calendar: runs entirely in the visitor's browser using Google
+       Identity Services. It only needs the OAuth Client ID below (not a
+       secret). See README → "Connecting Google Calendar".
+     Notion: goes through the small Cloudflare Worker in worker.js, because
+       Notion's API can't be called from a browser and its sign-in needs a
+       secret. See README → "Connecting Notion".
+     Both are read-only and only fetch this Monday–Sunday week. If a
+     connection isn't set up on this copy of the site (no Client ID yet, or
+     running on GitHub Pages / locally), its button falls back to the old
+     preview with clearly labeled sample events, so the page never breaks. */
+  var GOOGLE_CLIENT_ID = ""; // e.g. "123456789-abc123.apps.googleusercontent.com"
+  var GOOGLE_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+  var MAX_GOOGLE_CALENDARS = 10;
+
   const providerButtons = document.querySelectorAll(".provider-btn");
   const providerStatusNote = document.getElementById("providerStatusNote");
+  const googleBtn = document.querySelector('.provider-btn[data-provider="google"]');
+  const notionBtn = document.querySelector('.provider-btn[data-provider="notion"]');
+
+  // "real" once a real connection is available; otherwise the sample preview is used
+  var providerMode = { google: GOOGLE_CLIENT_ID ? "real" : "preview", notion: "preview" };
+  var googleTokenClient = null;
+  var googleAccessToken = null;
 
   var PROVIDER_SAMPLE_EVENTS = {
     google: function () {
@@ -801,40 +828,335 @@
     if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
   }
 
+  function setProviderBusy(btn, text) {
+    btn.disabled = true;
+    btn.textContent = text;
+  }
+
+  function setProviderConnected(btn, label) {
+    btn.disabled = false;
+    btn.classList.add("is-connected");
+    btn.textContent = "✓ Connected — " + label;
+    btn.title = "Click to disconnect";
+  }
+
+  function removeProviderEvents(provider) {
+    removeWeekEvents(function (ev) { return ev.source === provider || ev.source === provider + "-demo"; });
+  }
+
+  function parseLocalDate(str) {
+    var p = String(str).slice(0, 10).split("-");
+    return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  }
+
+  /* Puts real events from a calendar into the grid. The first time real data
+     arrives, Maya's sample week is cleared so visitors see only their own
+     schedule. Items: { title, start: Date, end: Date|null, allDay } */
+  function replaceWithRealEvents(source, items) {
+    removeProviderEvents(source);
+    var clearedSample = weekEvents.some(function (ev) { return ev.source === "sample"; });
+    if (clearedSample) removeWeekEvents(function (ev) { return ev.source === "sample"; });
+
+    var added = 0;
+    items.forEach(function (item) {
+      var dayIndex = dayIndexForDate(item.start);
+      if (dayIndex === -1 || added >= MAX_ICS_EVENTS_IN_WEEK) return;
+      var startMinutes = item.allDay ? 0 : item.start.getHours() * 60 + item.start.getMinutes();
+      var endMinutes = null;
+      if (!item.allDay && item.end && dayIndexForDate(item.end) === dayIndex) {
+        endMinutes = item.end.getHours() * 60 + item.end.getMinutes();
+        if (endMinutes <= startMinutes) endMinutes = null;
+      }
+      addWeekEvent({
+        title: item.title,
+        dayIndex: dayIndex,
+        startMinutes: startMinutes,
+        endMinutes: endMinutes,
+        allDay: item.allDay,
+        category: guessCategory(item.title),
+        source: source
+      });
+      added++;
+    });
+
+    track("calendar_" + source);
+    if (clearedSample) {
+      replanState.plan = null;
+      realityState.shown = {};
+      realityState.added = {};
+      realityState.dayIndex = defaultRealityDay();
+    }
+    renderAll();
+    return { added: added, clearedSample: clearedSample };
+  }
+
+  function plural(n, word) {
+    return n + " " + word + (n === 1 ? "" : "s");
+  }
+
+  /* ----- Preview fallback (used when a real connection isn't set up) ----- */
+  function togglePreview(btn, provider, label) {
+    if (btn.classList.contains("is-connected")) {
+      resetProviderButton(btn);
+      removeProviderEvents(provider);
+      renderAll();
+      setStatus(providerStatusNote, "Disconnected " + label + " — its sample events were removed.", "");
+      return;
+    }
+    setProviderBusy(btn, "Connecting…");
+    setTimeout(function () {
+      setProviderConnected(btn, label + " (preview)");
+      var events = PROVIDER_SAMPLE_EVENTS[provider]();
+      events.forEach(function (data) {
+        data.source = provider + "-demo";
+        addWeekEvent(data);
+      });
+      renderAll();
+      setStatus(providerStatusNote, "Preview only: added " + events.length + " sample events marked “Demo”. " +
+        "A real " + label + " connection isn't set up on this copy of the site yet (see the README).", "success");
+    }, 700);
+  }
+
+  /* ----- Google Calendar (Google Identity Services, browser-only) ----- */
+  function initGoogle() {
+    if (!GOOGLE_CLIENT_ID) return;
+    var script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = function () {
+      googleTokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: GOOGLE_SCOPE,
+        callback: function (response) {
+          if (response.error) {
+            googleFailed("Google didn't connect (" + response.error + ").");
+            return;
+          }
+          if (!google.accounts.oauth2.hasGrantedAllScopes(response, GOOGLE_SCOPE)) {
+            googleFailed("TimeWise needs permission to see your calendar — tick that box on Google's screen and try again.");
+            return;
+          }
+          googleAccessToken = response.access_token;
+          loadGoogleWeek();
+        },
+        error_callback: function (err) {
+          googleFailed(err && err.type === "popup_closed"
+            ? "The Google sign-in window was closed — nothing was connected."
+            : "Couldn't open Google sign-in. If your browser blocked a pop-up, allow it and try again.");
+        }
+      });
+    };
+    script.onerror = function () {
+      googleFailed("Couldn't load Google sign-in — check your connection or ad blocker.");
+    };
+    document.head.appendChild(script);
+  }
+
+  function googleFailed(message) {
+    resetProviderButton(googleBtn);
+    setStatus(providerStatusNote, message, "error");
+  }
+
+  function googleGet(path, params) {
+    var url = "https://www.googleapis.com/calendar/v3" + path + "?" + new URLSearchParams(params).toString();
+    return fetch(url, { headers: { Authorization: "Bearer " + googleAccessToken } }).then(function (res) {
+      if (!res.ok) throw new Error("Google responded with " + res.status);
+      return res.json();
+    });
+  }
+
+  function loadGoogleWeek() {
+    setProviderBusy(googleBtn, "Loading your week…");
+    googleGet("/users/me/calendarList", { minAccessRole: "reader", maxResults: "50" })
+      .then(function (list) {
+        // Calendars ticked in the visitor's Google Calendar sidebar, primary first
+        var calendars = (list.items || [])
+          .filter(function (cal) { return cal.selected || cal.primary; })
+          .slice(0, MAX_GOOGLE_CALENDARS);
+        return Promise.all(calendars.map(function (cal) {
+          return googleGet("/calendars/" + encodeURIComponent(cal.id) + "/events", {
+            timeMin: weekStart.toISOString(),
+            timeMax: dateForDay(7).toISOString(),
+            singleEvents: "true", // expands repeating events (like weekly classes)
+            orderBy: "startTime",
+            maxResults: "100"
+          }).then(function (data) { return data.items || []; }, function () { return []; });
+        })).then(function (lists) {
+          return { calendars: calendars.length, items: [].concat.apply([], lists) };
+        });
+      })
+      .then(function (result) {
+        var items = result.items
+          .filter(function (ev) { return ev.status !== "cancelled" && ev.start; })
+          .map(function (ev) {
+            var allDay = !ev.start.dateTime;
+            return {
+              title: ev.summary || "(No title)",
+              start: allDay ? parseLocalDate(ev.start.date) : new Date(ev.start.dateTime),
+              end: ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : null,
+              allDay: allDay
+            };
+          });
+        var outcome = replaceWithRealEvents("google", items);
+        setProviderConnected(googleBtn, "Google Calendar");
+        setStatus(providerStatusNote, "Added " + plural(outcome.added, "event") + " from " +
+          plural(result.calendars, "Google calendar") + " for this week" +
+          (outcome.clearedSample ? " (Maya's sample week was cleared)" : "") +
+          ". Read-only — nothing in your Google account was changed.", "success");
+      })
+      .catch(function (err) {
+        googleFailed("Couldn't load your Google Calendar: " + err.message + ".");
+      });
+  }
+
+  function disconnectGoogle() {
+    if (googleAccessToken && window.google) google.accounts.oauth2.revoke(googleAccessToken, function () {});
+    googleAccessToken = null;
+    resetProviderButton(googleBtn);
+    removeProviderEvents("google");
+    renderAll();
+    setStatus(providerStatusNote, "Disconnected Google Calendar and removed its events from this page.", "");
+  }
+
+  /* ----- Notion (through the Worker's /api/notion/* routes) ----- */
+  var NOTION_ERRORS = {
+    denied: "You cancelled the Notion connection — nothing was shared.",
+    state: "That Notion sign-in expired or came from another tab — please try again.",
+    token: "Notion didn't accept the sign-in. Double-check the client ID, secret, and redirect URI (see the README).",
+    not_configured: "Notion isn't set up on this copy of the site yet (see the README)."
+  };
+
+  function checkNotion() {
+    // Show the result of a sign-in that just redirected back here, then tidy the URL
+    var params = new URLSearchParams(window.location.search);
+    var returned = params.get("notion");
+    if (returned === "error") {
+      setStatus(providerStatusNote, NOTION_ERRORS[params.get("reason")] || "Notion didn't connect — please try again.", "error");
+    }
+    if (returned && window.history.replaceState) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+    }
+
+    if (window.location.protocol === "file:") return;
+    fetch("/api/notion/status", { credentials: "same-origin" })
+      .then(function (res) {
+        var isJson = (res.headers.get("Content-Type") || "").indexOf("application/json") !== -1;
+        return res.ok && isJson ? res.json() : null;
+      })
+      .then(function (status) {
+        if (!status || !status.configured) return; // not on the Cloudflare Worker, or no secrets yet
+        providerMode.notion = "real";
+        if (status.connected) loadNotionWeek(status.workspace);
+      })
+      .catch(function () { /* stays in preview mode */ });
+  }
+
+  // Result message from the sign-in pop-up (see backToSite() in worker.js)
+  window.addEventListener("message", function (e) {
+    if (e.origin !== window.location.origin || !e.data || e.data.type !== "timewise-notion") return;
+    if (e.data.result === "connected") {
+      fetch("/api/notion/status", { credentials: "same-origin" })
+        .then(function (res) { return res.json(); })
+        .then(function (status) { loadNotionWeek(status.workspace); })
+        .catch(function () { loadNotionWeek(""); });
+    } else {
+      resetProviderButton(notionBtn);
+      setStatus(providerStatusNote, NOTION_ERRORS[e.data.reason] || "Notion didn't connect — please try again.", "error");
+    }
+  });
+
+  function loadNotionWeek(workspace) {
+    setProviderBusy(notionBtn, "Loading from Notion…");
+    var start = toInputDate(dateForDay(-1)); // a day of padding each side for time zones
+    var end = toInputDate(dateForDay(7));
+    fetch("/api/notion/events?start=" + start + "&end=" + end, { credentials: "same-origin" })
+      .then(function (res) {
+        if (res.status === 401) throw new Error("not_connected");
+        if (!res.ok) throw new Error("Notion responded with " + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        var items = (data.events || []).map(function (ev) {
+          var allDay = String(ev.start).length <= 10;
+          return {
+            title: ev.title,
+            start: allDay ? parseLocalDate(ev.start) : new Date(ev.start),
+            end: ev.end && String(ev.end).length > 10 ? new Date(ev.end) : null,
+            allDay: allDay
+          };
+        });
+        var outcome = replaceWithRealEvents("notion", items);
+        setProviderConnected(notionBtn, "Notion" + (workspace ? " (" + workspace + ")" : ""));
+
+        var message;
+        if (!data.databases) {
+          message = "Connected, but no databases with a Date property were shared. Disconnect, reconnect, and pick " +
+            "a database like a task list or assignment tracker on Notion's screen.";
+        } else if (!outcome.added) {
+          message = "Connected! None of your " + plural(data.databases, "shared database") + " have items dated this week.";
+        } else {
+          message = "Added " + plural(outcome.added, "item") + " from " + plural(data.databases, "Notion database") +
+            (outcome.clearedSample ? " (Maya's sample week was cleared)" : "") + ". Read-only — nothing in Notion was changed.";
+        }
+        setStatus(providerStatusNote, message, "success");
+      })
+      .catch(function (err) {
+        resetProviderButton(notionBtn);
+        setStatus(providerStatusNote, err.message === "not_connected"
+          ? "Your Notion sign-in expired — click Connect Notion to reconnect."
+          : "Couldn't load from Notion: " + err.message + ".", "error");
+      });
+  }
+
+  function disconnectNotion() {
+    fetch("/api/notion/disconnect", { method: "POST", credentials: "same-origin" }).catch(function () {});
+    resetProviderButton(notionBtn);
+    removeProviderEvents("notion");
+    renderAll();
+    setStatus(providerStatusNote, "Disconnected Notion and removed its items from this page. To fully revoke access, " +
+      "remove TimeWise under Settings → Connections in Notion.", "");
+  }
+
+  /* ----- Button wiring ----- */
   providerButtons.forEach(function (btn) {
     btn.dataset.originalHtml = btn.innerHTML;
 
     btn.addEventListener("click", function () {
       var provider = btn.getAttribute("data-provider");
       var label = btn.getAttribute("data-label");
+      if (btn.disabled) return;
 
-      // Clicking a connected button disconnects it again
-      if (btn.classList.contains("is-connected")) {
-        resetProviderButton(btn);
-        removeWeekEvents(function (ev) { return ev.source === provider; });
-        renderAll();
-        setStatus(providerStatusNote, "Disconnected " + label + " — its sample events were removed.", "");
+      if (providerMode[provider] !== "real") {
+        togglePreview(btn, provider, label);
         return;
       }
 
-      if (btn.disabled) return;
-      btn.disabled = true;
-      btn.innerHTML = "Connecting…";
-
-      setTimeout(function () {
-        btn.disabled = false;
-        btn.classList.add("is-connected");
-        btn.innerHTML = "✓ Connected — " + label;
-
-        var events = PROVIDER_SAMPLE_EVENTS[provider] ? PROVIDER_SAMPLE_EVENTS[provider]() : [];
-        events.forEach(function (data) {
-          data.source = provider;
-          addWeekEvent(data);
-        });
-        renderAll();
-        setStatus(providerStatusNote, "Added " + events.length + " sample events from " + label +
-          " (marked “Demo” — no real account is connected).", "success");
-      }, 900);
+      if (provider === "google") {
+        if (btn.classList.contains("is-connected")) return disconnectGoogle();
+        if (!googleTokenClient) {
+          setStatus(providerStatusNote, "Google sign-in is still loading — try again in a moment.", "error");
+          return;
+        }
+        setProviderBusy(btn, "Waiting for Google…");
+        googleTokenClient.requestAccessToken(); // must run directly inside the click, or pop-up blockers step in
+      } else if (provider === "notion") {
+        if (btn.classList.contains("is-connected")) return disconnectNotion();
+        // Sign in through a pop-up so anything already on the grid stays put;
+        // if pop-ups are blocked, fall back to a normal full-page redirect.
+        var popup = window.open("/api/notion/login?popup=1", "timewise-notion", "width=560,height=720");
+        if (!popup) {
+          setProviderBusy(btn, "Opening Notion…");
+          window.location.href = "/api/notion/login";
+          return;
+        }
+        setProviderBusy(btn, "Waiting for Notion…");
+        var watchPopup = setInterval(function () {
+          if (popup.closed) {
+            clearInterval(watchPopup);
+            if (btn.textContent === "Waiting for Notion…") resetProviderButton(btn); // closed without finishing
+          }
+        }, 800);
+      }
     });
   });
 
@@ -1052,6 +1374,7 @@
 
           var total = allEvents.length + " event" + (allEvents.length === 1 ? "" : "s");
           if (added) {
+            track("calendar_ics");
             setStatus(icsStatus, "Added " + added + " event" + (added === 1 ? "" : "s") + " from this week to your grid (" +
               total + " in the file).", "success");
           } else {
@@ -1608,6 +1931,7 @@
         });
         realityState.added[day] = ev.id;
         renderAll();
+        track("reflection_step_added");
         var note = realityResult.querySelector(".reality-added");
         if (note) note.focus();
       });
@@ -1626,6 +1950,7 @@
     realityReflectBtn.addEventListener("click", function () {
       realityState.shown[realityState.dayIndex] = true;
       renderRealityResult();
+      track("reflection_viewed");
       if (window.matchMedia("(max-width: 960px)").matches) {
         realityResult.scrollIntoView({ behavior: "smooth", block: "start" });
       }
@@ -1643,15 +1968,514 @@
       }
       applyMayaAnswers(realityState.dayIndex);
       realityState.shown[realityState.dayIndex] = true;
+      track("reflection_viewed");
       delete realityState.added[realityState.dayIndex];
       renderAll();
     });
   }
 
-  // Initial calendar + reflection paint
+  /* ---------- 15. Replan my day ----------
+     Storyboard Screen 3, working. Takes what's left of a day from the week
+     grid, keeps fixed commitments (classes, shifts, meetings) where they are,
+     and re-slots everything movable into the free gaps after "now + delay",
+     with a short breather after each block. Whatever doesn't fit before the
+     "stop working by" time moves to the next day's first free slot.
+     Nothing changes in the grid until the visitor clicks "Apply". */
+  var REPLAN_BREATHER = 10; // minutes of slack after each moved block
+  var FIXED_KEYWORDS = /\b(shift|meeting|appointment|interview|practice|game|rehearsal|dinner|lunch|flight|office hours|call)\b/i;
+
+  const replanForm = document.getElementById("replanForm");
+  const replanDay = document.getElementById("replanDay");
+  const replanNow = document.getElementById("replanNow");
+  const replanDelay = document.getElementById("replanDelay");
+  const replanEndBy = document.getElementById("replanEndBy");
+  const replanNewTitle = document.getElementById("replanNewTitle");
+  const replanNewLength = document.getElementById("replanNewLength");
+  const replanBlocks = document.getElementById("replanBlocks");
+  const replanExampleBtn = document.getElementById("replanExampleBtn");
+  const replanResult = document.getElementById("replanResult");
+
+  var replanState = { fixed: {}, plan: null, applied: false };
+
+  function minutesToInput(total) {
+    var h = Math.floor(total / 60), m = total % 60;
+    return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+  }
+
+  function isFixedByDefault(ev) {
+    if (ev.category === "class") return true;
+    if (ev.category === "timewise" || ev.category === "assignment") return false;
+    return FIXED_KEYWORDS.test(ev.title);
+  }
+
+  function isFixed(ev) {
+    return Object.prototype.hasOwnProperty.call(replanState.fixed, ev.id) ? replanState.fixed[ev.id] : isFixedByDefault(ev);
+  }
+
+  function replanNowMinutes() {
+    return parseTimeInput(replanNow.value) || 0;
+  }
+
+  function remainingBlocks(dayIndex, now) {
+    return reflectableEvents(dayIndex).filter(function (ev) { return eventEnd(ev) > now; });
+  }
+
+  // First gap of `duration` minutes in [from, to] that avoids every busy interval
+  function firstGap(busy, from, to, duration) {
+    var sorted = busy.slice().sort(function (a, b) { return a[0] - b[0]; });
+    var cursor = roundUpTo(from, 5);
+    for (var i = 0; i < sorted.length; i++) {
+      if (sorted[i][1] <= cursor) continue;
+      if (sorted[i][0] >= cursor + duration) break;
+      cursor = Math.max(cursor, roundUpTo(sorted[i][1], 5));
+    }
+    return cursor + duration <= to ? cursor : null;
+  }
+
+  function buildReplan() {
+    var day = Number(replanDay.value);
+    var now = replanNowMinutes();
+    var delay = Number(replanDelay.value) || 0;
+    var endBy = parseTimeInput(replanEndBy.value) || 1320;
+    if (endBy <= now) endBy = Math.min(now + 120, 1439);
+    var start = now + delay;
+
+    var blocks = remainingBlocks(day, now);
+    var fixed = blocks.filter(isFixed);
+    var movable = blocks.filter(function (ev) { return !isFixed(ev); });
+
+    var newTitle = replanNewTitle.value.trim();
+    var items = movable.map(function (ev) {
+      var inProgress = ev.startMinutes < now;
+      return { ev: ev, title: ev.title, duration: inProgress ? eventEnd(ev) - now : eventDuration(ev), inProgress: inProgress };
+    });
+    // Something that just came up is usually the most time-sensitive, so it goes first
+    if (newTitle) items.unshift({ ev: null, title: newTitle, duration: Number(replanNewLength.value) || 30, isNew: true });
+
+    var busy = fixed.map(function (ev) { return [ev.startMinutes, eventEnd(ev)]; });
+    var rows = [];
+    var lateFor = [];
+
+    fixed.forEach(function (ev) {
+      if (ev.startMinutes >= now && ev.startMinutes < start) lateFor.push({ ev: ev, minutes: start - ev.startMinutes });
+      rows.push({ kind: "fixed", title: ev.title, ev: ev, before: formatEventTime(ev), after: formatEventTime(ev), sortKey: ev.startMinutes });
+    });
+
+    var deferred = [];
+    items.forEach(function (item) {
+      var slot = firstGap(busy, start, endBy, item.duration);
+      if (slot === null) {
+        deferred.push(item);
+        return;
+      }
+      busy.push([slot, slot + item.duration + REPLAN_BREATHER]);
+      var before = item.isNew ? "New" : formatEventTime(item.ev);
+      var after = formatMinutes(slot) + " – " + formatMinutes(slot + item.duration);
+      var kind = item.isNew ? "new" : (item.ev.startMinutes === slot && !item.inProgress ? "same" : "moved");
+      rows.push({ kind: kind, title: item.title, ev: item.ev, before: before, after: after, start: slot, end: slot + item.duration, sortKey: slot, isNew: item.isNew });
+    });
+
+    // What doesn't fit today goes to the next day's first free daytime slot
+    var nextDay = day < 6 ? day + 1 : -1;
+    deferred.forEach(function (item) {
+      var slot = nextDay === -1 ? null : findFreeSlot(nextDay, 540, 1260, Math.min(item.duration, 180));
+      rows.push({
+        kind: "deferred",
+        title: item.title,
+        ev: item.ev,
+        isNew: item.isNew,
+        before: item.isNew ? "New" : formatEventTime(item.ev),
+        after: nextDay === -1 ? "Next week" : DAY_SHORT[nextDay] + (slot === null ? "" : " " + formatMinutes(slot)),
+        nextDay: nextDay,
+        start: slot,
+        end: slot === null ? null : slot + Math.min(item.duration, 180),
+        sortKey: 2000 + rows.length
+      });
+    });
+
+    rows.sort(function (a, b) { return a.sortKey - b.sortKey; });
+    var scheduledMinutes = busy.reduce(function (sum, b) {
+      return sum + Math.max(0, Math.min(b[1], endBy) - Math.max(b[0], start));
+    }, 0);
+
+    return {
+      day: day, now: now, delay: delay, start: start, endBy: endBy, rows: rows,
+      counts: {
+        fixed: fixed.length,
+        moved: rows.filter(function (r) { return r.kind === "moved" || r.kind === "new"; }).length,
+        deferred: deferred.length
+      },
+      lateFor: lateFor,
+      freeMinutes: Math.max(0, endBy - start - scheduledMinutes)
+    };
+  }
+
+  function renderReplanDays() {
+    if (!replanDay) return;
+    var current = replanDay.value;
+    replanDay.innerHTML = "";
+    for (var i = 0; i < 7; i++) {
+      var opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = DAY_NAMES[i] + (i === todayIndex ? " (today)" : "");
+      replanDay.appendChild(opt);
+    }
+    replanDay.value = current !== "" ? current : String(todayIndex);
+  }
+
+  function renderReplanBlocks() {
+    if (!replanBlocks) return;
+    var day = Number(replanDay.value);
+    var blocks = remainingBlocks(day, replanNowMinutes());
+    replanBlocks.innerHTML = "";
+    if (!blocks.length) {
+      var empty = document.createElement("li");
+      empty.className = "reality-empty-day";
+      empty.textContent = "Nothing left on " + DAY_NAMES[day] + " after this time. Pick an earlier time or another day — or add blocks in Your Week above.";
+      replanBlocks.appendChild(empty);
+      return;
+    }
+    blocks.forEach(function (ev) {
+      var li = document.createElement("li");
+      var btn = document.createElement("button");
+      var fixed = isFixed(ev);
+      btn.type = "button";
+      btn.className = "replan-block" + (fixed ? " is-fixed" : "");
+      btn.setAttribute("aria-pressed", String(fixed));
+      btn.setAttribute("aria-label", ev.title + ", " + formatEventTime(ev) + ": " + (fixed ? "fixed time" : "can move") + ". Tap to switch.");
+      var dot = document.createElement("span");
+      dot.className = "reality-dot reality-dot-" + ev.category;
+      var text = document.createElement("span");
+      text.className = "replan-block-text";
+      var title = document.createElement("strong");
+      title.textContent = ev.title;
+      var time = document.createElement("small");
+      time.textContent = formatEventTime(ev);
+      text.appendChild(title);
+      text.appendChild(time);
+      var tag = document.createElement("span");
+      tag.className = "replan-block-tag";
+      tag.textContent = fixed ? "📌 Fixed" : "↔ Can move";
+      btn.appendChild(dot);
+      btn.appendChild(text);
+      btn.appendChild(tag);
+      btn.addEventListener("click", function () {
+        replanState.fixed[ev.id] = !isFixed(ev);
+        renderReplanBlocks();
+        var again = replanBlocks.querySelectorAll(".replan-block")[blocks.indexOf(ev)];
+        if (again) again.focus();
+        if (replanState.plan && !replanState.applied) runReplan();
+      });
+      li.appendChild(btn);
+      replanBlocks.appendChild(li);
+    });
+  }
+
+  function renderReplanResult() {
+    if (!replanResult) return;
+    replanResult.innerHTML = "";
+    var plan = replanState.plan;
+
+    if (!plan) {
+      var placeholder = document.createElement("div");
+      placeholder.className = "reality-placeholder";
+      placeholder.innerHTML =
+        '<span class="reality-placeholder-icon" aria-hidden="true">🔀</span>' +
+        "<h4>Your new plan shows up here</h4>" +
+        "<p>Tell TimeWise what changed and tap <strong>Replan the rest of my day</strong>. You'll see what stays, " +
+        "what moves, and what can wait until tomorrow.</p>";
+      replanResult.appendChild(placeholder);
+      return;
+    }
+
+    // Summary sentence
+    var summary = document.createElement("div");
+    summary.className = "reality-card replan-summary";
+    summary.innerHTML = '<span class="pill pill-purple">🔀 New plan from ' + formatMinutes(plan.start) + "</span>";
+    var p = document.createElement("p");
+    var bits = [];
+    if (plan.counts.fixed) bits.push("kept " + plural(plan.counts.fixed, "fixed commitment") + " in place");
+    if (plan.counts.moved) bits.push("fit " + plural(plan.counts.moved, "block") + " into the gaps");
+    if (plan.counts.deferred) bits.push("moved " + plural(plan.counts.deferred, "block") + " to " +
+      (plan.day < 6 ? DAY_NAMES[plan.day + 1] : "next week"));
+    var sentence = bits.length ? bits.join(", ") : "nothing needed to change";
+    p.textContent = sentence.charAt(0).toUpperCase() + sentence.slice(1) + ", so you still wrap up by " + formatMinutes(plan.endBy) +
+      (plan.freeMinutes >= 15 && !plan.counts.deferred ? " — with about " + plan.freeMinutes + " free minutes to spare." : ".");
+    summary.appendChild(p);
+    plan.lateFor.forEach(function (late) {
+      var warn = document.createElement("p");
+      warn.className = "replan-warning";
+      warn.textContent = "Heads up: at this pace you'll be about " + late.minutes + " min late to " + late.ev.title +
+        ". Wrap up what you're doing early, or send a quick heads-up.";
+      summary.appendChild(warn);
+    });
+    replanResult.appendChild(summary);
+
+    // Before → after list
+    var list = document.createElement("ol");
+    list.className = "replan-rows";
+    var LABELS = { fixed: "📌 Stays", same: "✓ Same time", moved: "↪ Moved", new: "✚ Added", deferred: "⏭ Tomorrow" };
+    plan.rows.forEach(function (row) {
+      var li = document.createElement("li");
+      li.className = "replan-row is-" + row.kind;
+      var title = document.createElement("span");
+      title.className = "replan-row-title";
+      title.textContent = row.title;
+      var tag = document.createElement("span");
+      tag.className = "replan-row-tag";
+      tag.textContent = row.kind !== "deferred" ? LABELS[row.kind]
+        : row.nextDay === -1 ? "⏭ Next week" : plan.day === todayIndex ? "⏭ Tomorrow" : "⏭ Next day";
+      var times = document.createElement("span");
+      times.className = "replan-row-times";
+      if (row.kind === "fixed" || row.kind === "same") {
+        times.textContent = row.after;
+      } else {
+        var before = document.createElement("s");
+        before.textContent = row.before;
+        if (row.isNew) {
+          times.textContent = row.after;
+        } else {
+          times.appendChild(before);
+          times.appendChild(document.createTextNode(" → " + row.after));
+        }
+      }
+      li.appendChild(tag);
+      li.appendChild(title);
+      li.appendChild(times);
+      list.appendChild(li);
+    });
+    replanResult.appendChild(list);
+
+    // Apply
+    var actions = document.createElement("div");
+    actions.className = "replan-actions";
+    if (replanState.applied) {
+      var done = document.createElement("p");
+      done.className = "reality-added";
+      done.tabIndex = -1;
+      done.appendChild(document.createTextNode("✓ Applied — Your Week is updated. "));
+      var link = document.createElement("a");
+      link.href = "#calendars";
+      link.textContent = "See it ↑";
+      done.appendChild(link);
+      actions.appendChild(done);
+    } else if (plan.counts.moved || plan.counts.deferred) {
+      var apply = document.createElement("button");
+      apply.type = "button";
+      apply.className = "btn btn-primary btn-small";
+      apply.textContent = "Apply to my week";
+      apply.addEventListener("click", applyReplan);
+      actions.appendChild(apply);
+    }
+    replanResult.appendChild(actions);
+  }
+
+  function runReplan() {
+    replanState.plan = buildReplan();
+    replanState.applied = false;
+    renderReplanResult();
+  }
+
+  function applyReplan() {
+    var plan = replanState.plan;
+    if (!plan) return;
+    plan.rows.forEach(function (row) {
+      if (row.kind === "moved" || row.kind === "same") {
+        row.ev.startMinutes = row.start;
+        row.ev.endMinutes = row.end;
+      } else if (row.kind === "new") {
+        addWeekEvent({ title: row.title, dayIndex: plan.day, startMinutes: row.start, endMinutes: row.end,
+          category: guessCategory(row.title), source: "manual" });
+      } else if (row.kind === "deferred" && row.nextDay !== -1 && row.start !== null) {
+        if (row.isNew) {
+          addWeekEvent({ title: row.title, dayIndex: row.nextDay, startMinutes: row.start, endMinutes: row.end,
+            category: guessCategory(row.title), source: "manual" });
+        } else {
+          row.ev.dayIndex = row.nextDay;
+          row.ev.startMinutes = row.start;
+          row.ev.endMinutes = row.end;
+          row.ev.reality = null;
+        }
+      }
+    });
+    replanState.applied = true;
+    replanNewTitle.value = "";
+    renderAll();
+    track("replan_applied");
+    var note = replanResult.querySelector(".reality-added");
+    if (note) note.focus();
+  }
+
+  function resetReplanTime() {
+    var day = Number(replanDay.value);
+    var now = new Date();
+    var minutes = now.getHours() * 60 + Math.floor(now.getMinutes() / 5) * 5;
+    // Outside waking hours (or on another day), start from midday so there's something to replan
+    if (day !== todayIndex || minutes < 480 || minutes > 1260) minutes = 720;
+    replanNow.value = minutesToInput(minutes);
+  }
+
+  function renderReplan() {
+    renderReplanDays();
+    renderReplanBlocks();
+    renderReplanResult();
+  }
+
+  if (replanForm) {
+    replanForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      runReplan();
+      track("replan_used");
+      if (window.matchMedia("(max-width: 960px)").matches) {
+        replanResult.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+
+    replanDay.addEventListener("change", function () {
+      resetReplanTime();
+      replanState.plan = null;
+      renderReplanBlocks();
+      renderReplanResult();
+    });
+    replanNow.addEventListener("change", function () {
+      renderReplanBlocks();
+      if (replanState.plan && !replanState.applied) runReplan();
+    });
+    [replanDelay, replanEndBy, replanNewLength].forEach(function (el) {
+      el.addEventListener("change", function () {
+        if (replanState.plan && !replanState.applied) runReplan();
+      });
+    });
+
+    replanExampleBtn.addEventListener("click", function () {
+      // Maya's Monday: Econ ran long, a recruiter wants a call back, and she wants her evening free
+      var busiest = 0;
+      for (var i = 0; i < 7; i++) {
+        if (reflectableEvents(i).length > reflectableEvents(busiest).length) busiest = i;
+      }
+      replanDay.value = String(busiest);
+      replanNow.value = "12:30";
+      replanDelay.value = "45";
+      replanEndBy.value = "20:00"; // she promised herself a night off
+      replanNewTitle.value = "Call back internship recruiter";
+      replanNewLength.value = "30";
+      replanState.fixed = {};
+      renderReplanBlocks();
+      runReplan();
+      track("replan_used");
+    });
+  }
+
+  /* ---------- 16. Early access + anonymous feature counts ----------
+     The form posts to the Worker's /api/waitlist (stored in Cloudflare D1).
+     track() tells /api/track which demo features a visitor tried, once per
+     feature per visitor, using a random ID kept in this browser — no names,
+     no cookies. On hosts without the Worker (GitHub Pages, a local file),
+     these calls simply fail quietly. See results.html to read the numbers. */
+  var VISITOR_KEY = "timewise-visitor-id";
+  var trackedThisPage = {};
+  var visitorId = (function () {
+    var id = null;
+    try { id = window.localStorage.getItem(VISITOR_KEY); } catch (e) { /* storage blocked */ }
+    if (!id || !/^[A-Za-z0-9-]{8,64}$/.test(id)) {
+      id = window.crypto && window.crypto.randomUUID
+        ? window.crypto.randomUUID()
+        : "v-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
+      try { window.localStorage.setItem(VISITOR_KEY, id); } catch (e) { /* fine — counts per visit instead */ }
+    }
+    return id;
+  })();
+
+  function track(event) {
+    if (window.location.protocol === "file:" || trackedThisPage[event]) return;
+    trackedThisPage[event] = true;
+    try {
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visitorId: visitorId, event: event }),
+        keepalive: true
+      }).catch(function () {});
+    } catch (e) { /* ignore */ }
+  }
+
+  const earlyForm = document.getElementById("earlyAccessForm");
+  const earlyStatus = document.getElementById("earlyStatus");
+  const earlySubmit = document.getElementById("earlySubmit");
+  const earlyThanks = document.getElementById("earlyThanks");
+  const earlyThanksText = document.getElementById("earlyThanksText");
+
+  if (earlyForm) {
+    earlyForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var data = new FormData(earlyForm);
+      var payload = {
+        visitorId: visitorId,
+        email: String(data.get("email") || "").trim(),
+        planning: data.get("planning") || "",
+        struggle: data.get("struggle") || "",
+        weekly: data.get("weekly") || "",
+        website: data.get("website") || ""
+      };
+
+      if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+        setStatus(earlyStatus, "That email doesn't look quite right — double-check it, or leave it blank.", "error");
+        document.getElementById("earlyEmail").focus();
+        return;
+      }
+      if (!payload.email && !payload.planning && !payload.struggle && !payload.weekly) {
+        setStatus(earlyStatus, "Add your email or answer at least one question first.", "error");
+        return;
+      }
+
+      earlySubmit.disabled = true;
+      earlySubmit.textContent = "Sending…";
+      setStatus(earlyStatus, "", "");
+
+      fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (body) {
+            if (!res.ok) throw new Error(body.error || "status_" + res.status);
+            return body;
+          });
+        })
+        .then(function (body) {
+          earlyForm.hidden = true;
+          earlyThanks.hidden = false;
+          earlyThanksText.textContent = (payload.email
+            ? "We'll email " + payload.email + " when TimeWise is ready. "
+            : "Your answers are in. ") +
+            (body.responses > 1 ? "You're one of " + body.responses + " students who've weighed in so far." : "You're the very first to weigh in!");
+          earlyThanks.focus();
+        })
+        .catch(function (err) {
+          earlySubmit.disabled = false;
+          earlySubmit.textContent = "Join early access";
+          var messages = {
+            not_configured: "Sign-ups aren't switched on for this copy of the site yet.",
+            bad_email: "That email doesn't look quite right — double-check it, or leave it blank."
+          };
+          setStatus(earlyStatus, messages[err.message] ||
+            (window.location.protocol === "file:" || /status_(404|405)/.test(err.message)
+              ? "Sign-ups only work on the live site."
+              : "Something went wrong — please try again in a moment."), "error");
+        });
+    });
+  }
+
+  // Initial calendar, replan + reflection paint, then look for real calendar connections
   loadSampleWeek();
   realityState.dayIndex = defaultRealityDay();
+  renderReplanDays();
+  resetReplanTime();
   renderAll();
+  initGoogle();
+  checkNotion();
+  track("visit");
 
   // Initial paint
   renderHome();

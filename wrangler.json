@@ -1,8 +1,23 @@
 {
-  "name": "timewise-pitch",
+  "name": "timewise",
+  "main": "worker.js",
   "compatibility_date": "2026-09-22",
   "assets": {
     "directory": ".",
-    "not_found_handling": "404-page"
-  }
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "timewise",
+      "database_id": "f905a77d-6b36-4258-87e7-3dee1ff5a8de"
+    }
+  ]
 }

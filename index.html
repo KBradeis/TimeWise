@@ -59,9 +59,9 @@
         <!-- Kept to the essentials so the bar stays calm; the footer links to every section -->
         <a href="#how-it-works">How It Works</a>
         <a href="#calendars">Calendars</a>
+        <a href="#replan">Replan</a>
         <a href="#reality">Reflect</a>
-        <a href="#why-different">Why TimeWise</a>
-        <a href="#demo" class="btn btn-primary btn-small">Try the Demo</a>
+        <a href="#early-access" class="btn btn-primary btn-small">Get Early Access</a>
       </nav>
     </div>
   </header>
@@ -81,7 +81,7 @@
           </p>
           <div class="hero-ctas">
             <a href="#demo" class="btn btn-primary btn-large">Try the Demo</a>
-            <a href="#solution" class="btn btn-secondary btn-large">Learn More</a>
+            <a href="#early-access" class="btn btn-secondary btn-large">Get Early Access</a>
           </div>
           <div class="hero-trust">
             <span class="pill pill-purple">🎯 Reflection + planning</span>
@@ -376,8 +376,11 @@
 
           <div class="calendar-divider"><span>or</span></div>
 
-          <h3 class="calendar-panel-heading">Quick connect (preview)</h3>
-          <p class="calendar-panel-sub">A look at the experience — these two don't link a real account yet.</p>
+          <h3 class="calendar-panel-heading">Connect your calendars</h3>
+          <p class="calendar-panel-sub">
+            Read-only: TimeWise just reads this week's events to show them here, and never changes anything
+            in your account.
+          </p>
           <div class="calendar-providers">
             <button type="button" class="provider-btn" data-provider="google" data-label="Google Calendar">
               <span class="provider-icon">🗓️</span> Connect Google Calendar
@@ -408,10 +411,92 @@
         </div>
 
         <p class="calendar-disclaimer">
-          Google Calendar and Notion above are a preview of the experience — no real account is connected
-          and no data is sent anywhere. Manually added events and the .ics upload are fully functional and
-          processed locally in this browser — nothing is saved once you leave the page.
+          Google Calendar and Notion connections are read-only and only fetch this week. Google events go
+          straight from Google to your browser; Notion items pass through this site's small server on their
+          way to you, and nothing is stored there. Your Notion sign-in is kept in a secure cookie in your
+          browser for 7 days. Everything on the grid disappears when you leave the page.
         </p>
+      </div>
+    </section>
+
+    <!-- ============ REPLAN MY DAY ============
+         Storyboard Screen 3, working. Reads the same "Your week" events; script.js
+         (section 15) reshuffles the rest of a day around fixed commitments. -->
+    <section id="replan" class="section replan">
+      <div class="container">
+        <p class="eyebrow eyebrow-center">When Plans Change</p>
+        <h2 class="section-title section-title-center">Replan the rest of your day in seconds</h2>
+        <p class="section-lead section-lead-center">
+          Running late? Something new came up? Tell TimeWise what changed. It keeps your fixed commitments
+          where they are, reshuffles everything else, and moves what won't fit to tomorrow, so the rest of
+          your day is still realistic.
+        </p>
+
+        <div class="reality-panel replan-panel">
+          <div class="replan-body">
+            <form class="replan-form" id="replanForm">
+              <div class="reality-checkin-head">
+                <h3 class="calendar-panel-heading">What changed?</h3>
+                <button type="button" class="reality-example-btn" id="replanExampleBtn">Try Maya's messy Monday</button>
+              </div>
+
+              <div class="quick-add-row">
+                <label class="quick-add-field">
+                  <span>Day</span>
+                  <select id="replanDay"></select>
+                </label>
+                <label class="quick-add-field">
+                  <span>Right now it's</span>
+                  <input type="time" id="replanNow" step="300" required />
+                </label>
+              </div>
+
+              <div class="quick-add-row">
+                <label class="quick-add-field">
+                  <span>I'm running behind by</span>
+                  <select id="replanDelay">
+                    <option value="0">Not behind</option>
+                    <option value="15">15 min</option>
+                    <option value="30" selected>30 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60">1 hour</option>
+                    <option value="90">1.5 hours</option>
+                  </select>
+                </label>
+                <label class="quick-add-field">
+                  <span>Stop working by</span>
+                  <input type="time" id="replanEndBy" value="22:00" step="900" required />
+                </label>
+              </div>
+
+              <div class="quick-add-row">
+                <label class="quick-add-field quick-add-field-title">
+                  <span>Something new came up <small>(optional)</small></span>
+                  <input type="text" id="replanNewTitle" maxlength="60" placeholder="e.g. Call back internship recruiter" />
+                </label>
+                <label class="quick-add-field">
+                  <span>How long?</span>
+                  <select id="replanNewLength">
+                    <option value="15">15 min</option>
+                    <option value="30" selected>30 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60">1 hour</option>
+                    <option value="90">1.5 hours</option>
+                    <option value="120">2 hours</option>
+                  </select>
+                </label>
+              </div>
+
+              <h4 class="replan-subheading">What's left today</h4>
+              <p class="calendar-panel-sub">Tap a block to switch it between <strong>📌 fixed time</strong> and <strong>↔ can move</strong>.</p>
+              <ul class="replan-blocks" id="replanBlocks"></ul>
+
+              <button type="submit" class="btn btn-primary btn-full" id="replanBtn">Replan the rest of my day</button>
+            </form>
+
+            <div class="reality-result replan-result" id="replanResult" aria-live="polite"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -626,11 +711,67 @@
     </section>
 
     <!-- ============ FINAL CTA ============ -->
-    <section class="section final-cta">
+    <section id="early-access" class="section final-cta early-access">
       <div class="container final-cta-inner">
-        <h2>Ready to build a time management habit that actually sticks?</h2>
-        <p>No sign-up required to explore the concept — just scroll up and try the demo.</p>
-        <a href="#demo" class="btn btn-primary btn-large">Explore the Concept</a>
+        <h2>Want TimeWise when it launches?</h2>
+        <p>Join the early-access list and answer three quick questions. It takes about 20 seconds and
+          directly shapes what gets built first.</p>
+
+        <form class="early-card" id="earlyAccessForm" novalidate>
+          <label class="quick-add-field early-email">
+            <span>Email <small>(optional — only if you want early access)</small></span>
+            <input type="email" id="earlyEmail" name="email" autocomplete="email" placeholder="you@school.edu" maxlength="200" />
+          </label>
+
+          <fieldset class="early-question">
+            <legend>How do you plan your week right now?</legend>
+            <div class="early-options">
+              <label><input type="radio" name="planning" value="Paper planner" /><span>Paper planner</span></label>
+              <label><input type="radio" name="planning" value="Google or Apple Calendar" /><span>Google or Apple Calendar</span></label>
+              <label><input type="radio" name="planning" value="Notion or a to-do app" /><span>Notion or a to-do app</span></label>
+              <label><input type="radio" name="planning" value="In my head" /><span>In my head</span></label>
+              <label><input type="radio" name="planning" value="Something else" /><span>Something else</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="early-question">
+            <legend>What's your biggest time struggle?</legend>
+            <div class="early-options">
+              <label><input type="radio" name="struggle" value="Deadlines piling up" /><span>Deadlines piling up</span></label>
+              <label><input type="radio" name="struggle" value="Procrastinating" /><span>Procrastinating</span></label>
+              <label><input type="radio" name="struggle" value="Balancing school, work &amp; life" /><span>Balancing school, work &amp; life</span></label>
+              <label><input type="radio" name="struggle" value="Plans falling apart mid-day" /><span>Plans falling apart mid-day</span></label>
+              <label><input type="radio" name="struggle" value="Knowing what to do first" /><span>Knowing what to do first</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="early-question">
+            <legend>Would you use TimeWise every week?</legend>
+            <div class="early-options">
+              <label><input type="radio" name="weekly" value="Definitely" /><span>Definitely</span></label>
+              <label><input type="radio" name="weekly" value="Probably" /><span>Probably</span></label>
+              <label><input type="radio" name="weekly" value="Not sure" /><span>Not sure</span></label>
+              <label><input type="radio" name="weekly" value="Probably not" /><span>Probably not</span></label>
+            </div>
+          </fieldset>
+
+          <!-- Honeypot: hidden from people, bots tend to fill it in -->
+          <label class="early-honeypot" aria-hidden="true">Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+
+          <button type="submit" class="btn btn-primary btn-full" id="earlySubmit">Join early access</button>
+          <p class="ics-status" id="earlyStatus" aria-live="polite"></p>
+          <p class="early-privacy">
+            Your email is only used to tell you when TimeWise launches. To learn what's useful, this site also
+            counts anonymously which demo features visitors try — no names, no ads, nothing sold.
+          </p>
+        </form>
+
+        <div class="early-card early-thanks" id="earlyThanks" hidden tabindex="-1">
+          <span class="early-thanks-icon" aria-hidden="true">🎉</span>
+          <h3>You're in — thank you!</h3>
+          <p id="earlyThanksText">Your answers help decide what TimeWise builds first.</p>
+          <a href="#calendars" class="btn btn-secondary btn-small">Keep exploring the demo</a>
+        </div>
       </div>
     </section>
 
@@ -652,6 +793,7 @@
         <a href="#how-it-works">How It Works</a>
         <a href="#storyboard">Storyboard</a>
         <a href="#calendars">Calendars</a>
+        <a href="#replan">Replan</a>
         <a href="#reality">Reflect</a>
         <a href="#demo">Demo</a>
         <a href="#why-different">Why TimeWise</a>
