@@ -28,6 +28,14 @@ tracker.
   make the product's core promise tangible: however your schedule is scattered today, TimeWise pulls it
   into one calm view. Nothing is ever sent to a server; see
   [Calendar linking](#calendar-linking-how-real-is-it) below for the full picture.
+- **Plan vs. Reality** — the minimum viable feature that shows what makes TimeWise different. It reads
+  the same "Your Week" events as the calendar section: pick a day, mark each block as *Done*, *Ran over*
+  (by how much), *Swapped*, or *Skipped* (and optionally what got in the way), and TimeWise returns a
+  score, one honest insight (e.g. "one overrun set off a chain reaction"), and one concrete next step
+  scheduled into a real free slot the next day — which you can add to the week grid with one click
+  (it shows up in green as a "TimeWise suggestion"). A **Try Maya's example** button fills in realistic
+  answers so it can be demoed in one click. Reflections come from simple, transparent rules in
+  `buildReflection()` in `script.js` — no AI service, no server, nothing saved.
 - **Live demo** — a fully working mock-up of the practice experience: a phone-style card with a
   home screen, a 10-question practice session (one question at a time, multiple choice,
   immediate supportive feedback, live score/streak/XP/progress bar), and a session summary with
@@ -281,8 +289,15 @@ a feature every one of these platforms already offers self-serve — at the cost
 - Colors and spacing live as CSS custom properties at the top of `styles.css` (`:root`), so a
   palette change is mostly a matter of editing a handful of variables.
 - The Google/Notion demo sample events live in `PROVIDER_SAMPLE_EVENTS` in `script.js` — each entry
-  is `{ title, date, startMinutes, endMinutes, category }`, where `category` is `"class"`,
+  is `{ dayIndex, title, startMinutes, endMinutes, category }`, where `category` is `"class"`,
   `"assignment"`, or `"personal"` (this controls the color of the event on the grid).
-- The "Your Week" grid itself is driven by the `weekEvents` array and `renderWeekGrid()` in
-  `script.js` — any code path that wants to add something to the grid just needs to push an object
-  in that same shape and call `renderWeekGrid()`.
+- The "Your Week" grid itself is driven by the `weekEvents` array in `script.js`. Add events with
+  `addWeekEvent({ title, dayIndex, startMinutes, endMinutes, category, source })` (`dayIndex` 0 = Monday)
+  and call `renderAll()`, which repaints both the grid and Plan vs. Reality. Maya's sample week (loaded
+  on page open) lives in `SAMPLE_WEEK`.
+- Plan vs. Reality's insight rules live in `buildReflection()` in `script.js`, checked in this order:
+  a cascade (an overrun followed by a later slip), then the most common reason a block slipped (energy,
+  something ran long, urgent, distracted, bigger than planned, avoidance), then overruns only, then
+  "everything went to plan." Each rule writes one insight and one next step.
+- `.ics` uploads now expand simple weekly/daily repeating events (the kind class schedules use), so
+  recurring lectures show up in the current week even if the series started months ago.

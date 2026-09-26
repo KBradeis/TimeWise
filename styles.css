@@ -168,6 +168,7 @@ input:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24px;
   height: 76px;
 }
 
@@ -187,8 +188,10 @@ input:focus-visible {
 .primary-nav {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 32px;
+  font-size: 0.95rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .primary-nav a:not(.btn) {
@@ -975,6 +978,686 @@ input:focus-visible {
   font-style: italic;
 }
 
+/* Your Week grid (shared by Calendars + Plan vs. Reality) */
+.week-grid-wrap {
+  max-width: 1040px;
+  margin: 40px auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+.week-grid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.week-grid-title {
+  margin-bottom: 0;
+}
+
+.week-grid-note {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.week-clear-btn {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--purple-dark);
+  background: var(--bg-alt);
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.week-clear-btn:hover {
+  background: #e6e1fd;
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.week-day {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 200px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+}
+
+.week-day.is-today {
+  border-color: var(--purple);
+  background: #f6f4ff;
+  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.15);
+}
+
+.week-day-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.week-day-name {
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.week-day.is-today .week-day-name {
+  color: var(--purple-dark);
+}
+
+.week-day-date {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.week-today-badge {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--purple);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.week-day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.week-day-empty {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--text-muted);
+  padding: 4px 2px;
+}
+
+.week-event {
+  position: relative;
+  min-width: 0;
+  border-left: 3px solid;
+  border-radius: 8px;
+  padding: 6px 18px 6px 8px;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.week-event-class { border-color: var(--purple); background: #ece9fd; }
+.week-event-assignment { border-color: var(--orange); background: #ffefe2; }
+.week-event-personal { border-color: var(--blue); background: #e5f0ff; }
+.week-event-timewise { border-color: var(--green); background: #dcfce9; }
+
+.week-event-time {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.week-event-status {
+  font-weight: 800;
+  color: var(--text);
+}
+
+.week-event-title {
+  display: block;
+  font-weight: 700;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.week-event.is-skipped .week-event-title,
+.week-event.is-swapped .week-event-title {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.week-event-tag {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+
+.week-event-timewise .week-event-tag {
+  color: var(--green-dark);
+}
+
+.week-event-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.week-event:hover .week-event-remove,
+.week-event-remove:focus-visible {
+  opacity: 1;
+}
+
+.week-event-remove:hover {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text);
+}
+
+@media (hover: none) {
+  .week-event-remove {
+    opacity: 0.6;
+  }
+}
+
+.week-grid-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.week-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.week-legend-dot {
+  display: inline-block;
+  width: 14px;
+  height: 12px;
+  border-left: 3px solid;
+  border-radius: 3px;
+}
+
+/* Quick-add form */
+.quick-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.quick-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.quick-add-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 140px;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.quick-add-field-title {
+  flex: 2 1 240px;
+}
+
+.quick-add-field small {
+  font-weight: 600;
+}
+
+.quick-add-field input,
+.quick-add-field select,
+.reality-detail select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.quick-add-field input:focus,
+.quick-add-field select:focus,
+.reality-detail select:focus {
+  border-color: var(--purple);
+  outline: none;
+}
+
+.quick-add-submit {
+  align-self: flex-start;
+  padding: 12px 24px;
+  min-height: 46px;
+  font-size: 0.95rem;
+}
+
+.provider-status-note {
+  margin-top: 10px;
+  min-height: 1.2em;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.provider-status-note.is-success {
+  color: var(--green-dark);
+}
+
+/* Plan vs. Reality */
+.reality {
+  background: var(--bg-alt);
+}
+
+.reality-panel {
+  max-width: 1040px;
+  margin: 40px auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+.reality-day-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  margin-bottom: 20px;
+}
+
+.reality-day-tab {
+  flex: 1 0 auto;
+  min-width: 78px;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 8px 10px;
+  font-family: var(--font-body);
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.reality-day-tab:hover {
+  border-color: #c9c0fa;
+}
+
+.reality-day-tab[aria-pressed="true"] {
+  border-color: var(--purple);
+  background: #f1eefe;
+}
+
+.reality-day-tab-name {
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+
+.reality-day-tab-meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.reality-day-tab.is-today .reality-day-tab-meta {
+  color: var(--purple-dark);
+  font-weight: 800;
+}
+
+.reality-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.reality-checkin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 4px;
+}
+
+.reality-checkin-head .calendar-panel-heading {
+  margin-bottom: 0;
+}
+
+.reality-example-btn {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--purple-dark);
+  background: none;
+  border: 1.5px dashed var(--purple);
+  border-radius: 999px;
+  padding: 6px 14px;
+  min-height: 34px;
+  cursor: pointer;
+}
+
+.reality-example-btn:hover {
+  background: var(--bg-alt);
+}
+
+.reality-future-note {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--orange-dark);
+  margin: -8px 0 12px;
+}
+
+.reality-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.reality-empty-day {
+  padding: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+.reality-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.reality-item-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.reality-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.reality-dot-class { background: var(--purple); }
+.reality-dot-assignment { background: var(--orange); }
+.reality-dot-personal { background: var(--blue); }
+.reality-dot-timewise { background: var(--green); }
+
+.reality-item-title {
+  display: block;
+  font-weight: 800;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.reality-item-time {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.reality-choices {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.reality-choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 6px 4px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.reality-choice:hover {
+  border-color: #c9c0fa;
+}
+
+.reality-choice.is-done[aria-pressed="true"] { background: #dcfce9; border-color: var(--green); color: #15803d; }
+.reality-choice.is-over[aria-pressed="true"] { background: #ffe8d6; border-color: var(--orange); color: #b45309; }
+.reality-choice.is-swapped[aria-pressed="true"] { background: #e3f0ff; border-color: var(--blue); color: #1d4ed8; }
+.reality-choice.is-skipped[aria-pressed="true"] { background: #fde4ee; border-color: #e0578c; color: #b0305f; }
+
+.reality-detail {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.reality-detail select {
+  width: auto;
+  flex: 1 1 200px;
+  min-height: 40px;
+  padding: 6px 10px;
+  font-size: 0.88rem;
+}
+
+.reality-result {
+  position: sticky;
+  top: 96px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  scroll-margin-top: 96px;
+}
+
+.reality-placeholder {
+  text-align: center;
+  padding: 36px 12px;
+  color: var(--text-muted);
+}
+
+.reality-placeholder-icon {
+  display: block;
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+}
+
+.reality-placeholder h4 {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+
+.reality-placeholder p {
+  font-size: 0.9rem;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.reality-score {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.reality-score-num {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 2.8rem;
+  line-height: 1;
+  color: var(--purple-dark);
+}
+
+.reality-score-num small {
+  font-size: 1.3rem;
+  color: var(--text-muted);
+}
+
+.reality-score-label {
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.reality-score-label small {
+  display: block;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.reality-bar {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.reality-bar-seg {
+  flex-basis: 0;
+}
+
+.reality-bar-seg.is-done, .reality-bar-swatch.is-done { background: var(--green); }
+.reality-bar-seg.is-over, .reality-bar-swatch.is-over { background: var(--orange); }
+.reality-bar-seg.is-swapped, .reality-bar-swatch.is-swapped { background: var(--blue); }
+.reality-bar-seg.is-skipped, .reality-bar-swatch.is-skipped { background: #e0578c; }
+
+.reality-bar-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.reality-bar-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.reality-bar-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.reality-card {
+  margin-top: 12px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.reality-card .pill {
+  padding: 4px 12px;
+  font-size: 0.78rem;
+}
+
+.reality-card h4 {
+  font-size: 1.15rem;
+  margin: 10px 0 4px;
+}
+
+.reality-card p {
+  font-size: 0.92rem;
+}
+
+.reality-next {
+  border: 2px solid #bbf0cf;
+}
+
+.reality-next p {
+  margin-top: 10px;
+}
+
+.reality-add-btn {
+  margin-top: 14px;
+}
+
+.reality-added {
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.reality-added:focus {
+  outline: none;
+}
+
+.reality-added a {
+  color: var(--purple-dark);
+  text-decoration: underline;
+}
+
 /* ---------- 7. Demo phone mockup ---------- */
 .demo-section {
   background: var(--surface);
@@ -1431,9 +2114,30 @@ input:focus-visible {
   .grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  /* Week grid scrolls sideways inside its card instead of squeezing */
+  .week-grid {
+    grid-template-columns: repeat(7, minmax(132px, 1fr));
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 6px;
+  }
+
+  .week-day {
+    scroll-snap-align: start;
+  }
+
+  .reality-body {
+    grid-template-columns: 1fr;
+  }
+
+  .reality-result {
+    position: static;
+  }
 }
 
-@media (max-width: 720px) {
+/* Collapse the header nav into the hamburger menu on tablets and phones */
+@media (max-width: 960px) {
   .nav-toggle {
     display: flex;
   }
@@ -1471,7 +2175,9 @@ input:focus-visible {
     margin-top: 14px;
     width: 100%;
   }
+}
 
+@media (max-width: 720px) {
   .section {
     padding: 64px 0;
   }
@@ -1514,6 +2220,15 @@ input:focus-visible {
     flex: 1 1 auto;
     justify-content: center;
   }
+
+  .week-grid-wrap,
+  .reality-panel {
+    padding: 18px 14px;
+  }
+
+  .quick-add-submit {
+    align-self: stretch;
+  }
 }
 
 @media (max-width: 420px) {
@@ -1523,5 +2238,9 @@ input:focus-visible {
 
   .container {
     padding: 0 18px;
+  }
+
+  .reality-choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

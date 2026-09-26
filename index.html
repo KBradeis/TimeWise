@@ -56,13 +56,10 @@
       </button>
 
       <nav class="primary-nav" id="primaryNav">
-        <a href="#problem">Problem</a>
-        <a href="#solution">Solution</a>
-        <a href="#features">Features</a>
+        <!-- Kept to the essentials so the bar stays calm; the footer links to every section -->
         <a href="#how-it-works">How It Works</a>
-        <a href="#storyboard">Storyboard</a>
         <a href="#calendars">Calendars</a>
-        <a href="#demo">Demo</a>
+        <a href="#reality">Reflect</a>
         <a href="#why-different">Why TimeWise</a>
         <a href="#demo" class="btn btn-primary btn-small">Try the Demo</a>
       </nav>
@@ -318,20 +315,24 @@
         <p class="section-lead section-lead-center">
           TimeWise is designed to pull classes, shifts, club meetings, and deadlines into one calm view —
           however your calendar already lives. Add an event or upload a calendar file below and watch your
-          week take shape.
+          week take shape — then reflect on how it actually went, just below.
         </p>
 
         <!-- Live "this week" grid — fed by the quick-add form, the .ics upload, and the preview connects -->
         <div class="week-grid-wrap">
           <div class="week-grid-header">
-            <h3 class="calendar-panel-heading week-grid-title">Your week</h3>
+            <div>
+              <h3 class="calendar-panel-heading week-grid-title">Your week</h3>
+              <p class="week-grid-note" id="weekGridNote"></p>
+            </div>
             <button type="button" class="week-clear-btn" id="weekClearBtn">Clear my week</button>
           </div>
-          <div class="week-grid" id="weekGrid" aria-live="polite"></div>
+          <div class="week-grid" id="weekGrid"></div>
           <div class="week-grid-legend">
             <span class="week-legend-item"><span class="week-legend-dot week-event-class"></span>Class</span>
             <span class="week-legend-item"><span class="week-legend-dot week-event-assignment"></span>Assignment</span>
             <span class="week-legend-item"><span class="week-legend-dot week-event-personal"></span>Personal</span>
+            <span class="week-legend-item"><span class="week-legend-dot week-event-timewise"></span>TimeWise suggestion</span>
           </div>
         </div>
 
@@ -371,6 +372,7 @@
             </div>
             <button type="submit" class="btn btn-primary quick-add-submit">+ Add to my week</button>
           </form>
+          <p class="ics-status" id="quickAddStatus" aria-live="polite"></p>
 
           <div class="calendar-divider"><span>or</span></div>
 
@@ -409,6 +411,45 @@
           Google Calendar and Notion above are a preview of the experience — no real account is connected
           and no data is sent anywhere. Manually added events and the .ics upload are fully functional and
           processed locally in this browser — nothing is saved once you leave the page.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ PLAN VS. REALITY ============
+         Reads the same "Your week" events as the section above. Visitors mark
+         what really happened to each block; script.js (section 14) turns that
+         into one insight + one next step that can be added to the next day. -->
+    <section id="reality" class="section reality">
+      <div class="container">
+        <p class="eyebrow eyebrow-center">Plan vs. Reality</p>
+        <h2 class="section-title section-title-center">See where your day actually went</h2>
+        <p class="section-lead section-lead-center">
+          Pick a day, mark what really happened to each block, and TimeWise turns it into one honest
+          insight and one realistic next step — then drops that step straight into tomorrow.
+        </p>
+
+        <div class="reality-panel">
+          <div class="reality-day-tabs" id="realityDayTabs" role="group" aria-label="Choose a day to reflect on"></div>
+
+          <div class="reality-body">
+            <div class="reality-checkin">
+              <div class="reality-checkin-head">
+                <h3 class="calendar-panel-heading" id="realityDayTitle">Today</h3>
+                <button type="button" class="reality-example-btn" id="realityExampleBtn">Try Maya's example</button>
+              </div>
+              <p class="calendar-panel-sub">For each block you planned, what actually happened?</p>
+              <p class="reality-future-note" id="realityFutureNote" hidden>This day hasn't happened yet — feel free to try the check-in anyway.</p>
+              <ol class="reality-list" id="realityList"></ol>
+              <button type="button" class="btn btn-primary btn-full" id="realityReflectBtn" disabled>See my reflection</button>
+            </div>
+
+            <div class="reality-result" id="realityResult" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <p class="calendar-disclaimer">
+          Reflections come from simple, transparent rules in this page — no AI service, no account,
+          and nothing leaves your browser.
         </p>
       </div>
     </section>
@@ -611,6 +652,7 @@
         <a href="#how-it-works">How It Works</a>
         <a href="#storyboard">Storyboard</a>
         <a href="#calendars">Calendars</a>
+        <a href="#reality">Reflect</a>
         <a href="#demo">Demo</a>
         <a href="#why-different">Why TimeWise</a>
       </nav>
