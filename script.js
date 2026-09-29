@@ -2467,14 +2467,24 @@
     });
   }
 
-  // Initial calendar, replan + reflection paint, then look for real calendar connections
-  loadSampleWeek();
-  realityState.dayIndex = defaultRealityDay();
-  renderReplanDays();
-  resetReplanTime();
-  renderAll();
-  initGoogle();
-  checkNotion();
+  // The week grid, Replan, and Plan vs. Reality live on try.html — only start
+  // them (and look for real calendar connections) on a page that has them.
+  if (weekGrid) {
+    loadSampleWeek();
+    realityState.dayIndex = defaultRealityDay();
+    renderReplanDays();
+    resetReplanTime();
+    renderAll();
+    initGoogle();
+    checkNotion();
+
+    // Arriving from a link like try.html#replan: the grid above just grew, so
+    // jump to the section again now that the page has its final height.
+    var target = window.location.hash && document.getElementById(window.location.hash.slice(1));
+    if (target) {
+      window.requestAnimationFrame(function () { target.scrollIntoView(); });
+    }
+  }
   track("visit");
 
   // Initial paint

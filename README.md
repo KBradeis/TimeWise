@@ -11,6 +11,22 @@ tracker.
 
 ## What's on the site
 
+The site is split into four pages that share one header, footer, `styles.css`, and `script.js`:
+
+| Page | What's on it |
+|---|---|
+| **`index.html`** (Home) | Hero, Problem, How It Works, "Try it" cards linking into the demo, and the Early Access form |
+| **`about.html`** (The Idea) | Solution, Features, Storyboard, Audience, and Why TimeWise is different |
+| **`try.html`** (Try It) | The interactive demo in three steps: Your Week (calendars), Replan my day, and Plan vs. Reality |
+| **`practice.html`** (Practice) | The practice-session quiz demo |
+
+The header shows **The Idea · Try It · Practice** plus a **Get Early Access** button, and the current
+page is underlined. The header and footer are copied into each page, so **edit all four pages together**
+when you change them. The inner pages end with a band that links to Early Access. `script.js` only
+starts the calendar, Replan, and reflection features on a page that has the week grid.
+
+Section by section:
+
 - **Hero** — the pitch in one screen, with primary/secondary calls to action
 - **Problem** — the everyday challenges college students face (deadlines, procrastination,
   overload, balancing school/work/life)
@@ -67,7 +83,10 @@ tracker.
 
 ```
 TimeWise/
-├── index.html               # Page structure and content (semantic HTML5)
+├── index.html               # Home: hero, problem, how it works, "try it" cards, early-access form
+├── about.html               # The Idea: solution, features, storyboard, audience, why different
+├── try.html                 # Try It: week grid + calendar connections, Replan, Plan vs. Reality
+├── practice.html            # Practice: the quiz demo
 ├── results.html             # Private results page for early-access answers + feature counts (needs ADMIN_KEY)
 ├── 404.html                 # Custom "page not found" page (Cloudflare + GitHub Pages)
 ├── styles.css                # All styling: layout, color system, responsive rules
@@ -412,7 +431,8 @@ To wipe the data (for example, after testing), run:
 
 ## Customizing
 
-- Update copy directly in `index.html` — each section is clearly commented.
+- Update copy directly in the page that holds the section (see the table at the top). Each section
+  is clearly commented.
 - Add or edit demo questions in the `QUESTIONS` array near the top of `script.js`. Each entry
   needs a `question`, four `choices`, a `correctIndex` (0–3), and both a correct and incorrect
   `feedback` message.

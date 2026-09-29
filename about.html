@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Idea — TimeWise</title>
+  <meta name="description" content="Why TimeWise exists: how it works, who it's for, a day in Maya's life, and how it's different from another planner." />
+
+  <!--
+    Social preview (Open Graph + Twitter Card): the URLs below assume the
+    GitHub Pages address from the README. If you deploy somewhere else
+    (a Cloudflare domain, a custom domain, etc.), update the four URLs
+    in this block to match — link previews on iMessage/Slack/Twitter/etc.
+    fetch og:image directly, so it needs to be a real, absolute URL.
+  -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="TimeWise" />
+  <meta property="og:title" content="The Idea — TimeWise" />
+  <meta property="og:description" content="Why TimeWise exists: how it works, who it's for, a day in Maya's life, and how it's different from another planner." />
+  <meta property="og:url" content="https://kbradeis.github.io/TimeWise/about.html" />
+  <meta property="og:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="The Idea — TimeWise" />
+  <meta name="twitter:description" content="Why TimeWise exists: how it works, who it's for, a day in Maya's life, and how it's different from another planner." />
+  <meta name="twitter:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
+  <meta name="twitter:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+
+  <!-- Favicon (SVG for modern browsers, .ico fallback for older ones) -->
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="alternate icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
+  <!-- Friendly rounded font, with solid system-font fallback if offline -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ============ HEADER / NAV ============
+       Same on every page (index, about, try, practice) — edit all four together. -->
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="index.html" class="logo" aria-label="TimeWise home">
+        <span class="logo-mark" aria-hidden="true">⏳</span>
+        <span class="logo-text">TimeWise</span>
+      </a>
+
+      <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="primaryNav" aria-label="Toggle navigation menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="primary-nav" id="primaryNav">
+        <a href="about.html" aria-current="page">The Idea</a>
+        <a href="try.html">Try It</a>
+        <a href="practice.html">Practice</a>
+        <a href="index.html#early-access" class="btn btn-primary btn-small">Get Early Access</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ PAGE INTRO ============ -->
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">The Idea</p>
+        <h1>Less guilt, more <span class="text-gradient">realistic plans.</span></h1>
+        <p class="page-hero-lead">College students don't need another to-do list. They need practice turning a messy week into a plan that fits — and a kind nudge when it falls apart. Here's the thinking behind TimeWise.</p>
+      </div>
+    </section>
+
+    <!-- ============ SOLUTION ============ -->
+    <section id="solution" class="section solution">
+      <div class="container solution-grid">
+        <div class="solution-copy">
+          <p class="eyebrow">The Solution</p>
+          <h2 class="section-title">Practice time management like a skill — because it is one.</h2>
+          <p class="section-lead">
+            TimeWise turns reflection into a short, supportive practice session instead of a lecture about
+            productivity. No shame, no overwhelm — just small, honest check-ins that build real habits.
+          </p>
+          <ul class="checklist">
+            <li><span class="check">✓</span> Start by naming your real goals and deadlines</li>
+            <li><span class="check">✓</span> Answer one short reflection or planning question at a time</li>
+            <li><span class="check">✓</span> Get immediate, supportive feedback — every time</li>
+            <li><span class="check">✓</span> Watch your score, streak, XP, and progress grow</li>
+            <li><span class="check">✓</span> Walk away with a takeaway and a realistic next step</li>
+          </ul>
+        </div>
+        <div class="solution-visual">
+          <div class="stat-chip stat-purple">
+            <span class="stat-num">92%</span>
+            <span class="stat-label">of sessions end with a clear next step*</span>
+          </div>
+          <div class="stat-chip stat-green">
+            <span class="stat-num">2 min</span>
+            <span class="stat-label">average practice session*</span>
+          </div>
+          <div class="stat-chip stat-orange">
+            <span class="stat-num">0</span>
+            <span class="stat-label">judgmental pop-ups, ever</span>
+          </div>
+          <p class="stat-footnote">*Illustrative goals for the concept, not measured data.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FEATURES ============ -->
+    <section id="features" class="section features">
+      <div class="container">
+        <p class="eyebrow eyebrow-center">Features</p>
+        <h2 class="section-title section-title-center">Everything you need to build the habit</h2>
+
+        <div class="grid grid-3">
+          <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <h3>Goal &amp; deadline input</h3>
+            <p>Tell TimeWise what matters right now so your practice sessions stay grounded in your real life.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">💬</div>
+            <h3>One question at a time</h3>
+            <p>Short, focused practice — no overwhelming forms or long surveys, just one clear question.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">💚</div>
+            <h3>Immediate, supportive feedback</h3>
+            <p>Every answer gets a kind, honest response that helps you learn without feeling judged.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔥</div>
+            <h3>Score, streak, XP &amp; progress</h3>
+            <p>Friendly, game-like feedback keeps practice motivating instead of feeling like a chore.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📝</div>
+            <h3>Session summary &amp; next steps</h3>
+            <p>Finish every session with a clear takeaway and one realistic action to try next.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🏠</div>
+            <h3>Persistent progress</h3>
+            <p>Your XP, streak, and completed sessions are saved right on your home screen.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ STORYBOARD ============ -->
+    <section id="storyboard" class="section storyboard">
+      <div class="container">
+        <p class="eyebrow eyebrow-center">See It In Action</p>
+        <h2 class="section-title section-title-center">A day with TimeWise, through Maya's eyes</h2>
+        <p class="section-lead section-lead-center">
+          Meet Maya: a junior juggling 15 credits, a part-time job, a club leadership role, and recruiting
+          season. Here's what a realistic day looks like with TimeWise as part of it.
+        </p>
+
+        <div class="grid grid-4 storyboard-grid">
+          <div class="storyboard-card">
+            <span class="pill pill-purple">Screen 1</span>
+            <div class="info-icon icon-purple">🗺️</div>
+            <h3>&ldquo;See Everything Clearly&rdquo;</h3>
+            <p class="storyboard-caption">The dashboard</p>
+            <p>Classes, work shifts, club meetings, social plans, deadlines, exams, and recruiting milestones
+              all show up in one calm, color-coded view — with conflicts and available work time highlighted
+              automatically.</p>
+          </div>
+
+          <div class="storyboard-card">
+            <span class="pill pill-blue">Screen 2</span>
+            <div class="info-icon icon-blue">✅</div>
+            <h3>&ldquo;Plan What Matters Today&rdquo;</h3>
+            <p class="storyboard-caption">Today's plan</p>
+            <p>TimeWise suggests three realistic priorities with recommended time blocks and a short reason
+              each one matters. Maya can accept the plan as-is, edit it, or postpone something to another
+              day.</p>
+          </div>
+
+          <div class="storyboard-card">
+            <span class="pill pill-orange">Screen 3</span>
+            <div class="info-icon icon-orange">🔄</div>
+            <h3>&ldquo;Adjust Without Starting Over&rdquo;</h3>
+            <p class="storyboard-caption">Replanning</p>
+            <p>When something unexpected comes up, Maya taps <strong>Replan My Day</strong>. TimeWise moves
+              lower-priority tasks, protects real deadlines, and hands back a revised plan that still feels
+              achievable.</p>
+          </div>
+
+          <div class="storyboard-card">
+            <span class="pill pill-green">Screen 4</span>
+            <div class="info-icon icon-green">📓</div>
+            <h3>&ldquo;Reflect and Keep Momentum&rdquo;</h3>
+            <p class="storyboard-caption">End-of-day reflection</p>
+            <p>A brief journal asks what went well, what changed, and what should happen next. Progress is
+              measured in completed meaningful actions — not just hours worked.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AUDIENCE ============ -->
+    <section id="audience" class="section audience">
+      <div class="container audience-grid">
+        <div class="audience-visual" aria-hidden="true">
+          <span class="audience-chip chip-1">🎓 Academics</span>
+          <span class="audience-chip chip-2">💼 Work</span>
+          <span class="audience-chip chip-3">👨‍👩‍👧 Family</span>
+          <span class="audience-chip chip-4">🤝 Friends</span>
+          <span class="audience-chip chip-5">🧘 Rest</span>
+          <span class="audience-chip chip-6">🌟 Personal goals</span>
+        </div>
+        <div class="audience-copy">
+          <p class="eyebrow">Who It's For</p>
+          <h2 class="section-title">Built for students juggling a full, real life.</h2>
+          <p class="section-lead">
+            TimeWise is for college students balancing academics, jobs, family responsibilities, social
+            commitments, rest, and personal goals — all at the same time. It meets you where you are,
+            without asking you to overhaul your entire life overnight.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ WHY DIFFERENT ============ -->
+    <section id="why-different" class="section why-different">
+      <div class="container">
+        <p class="eyebrow eyebrow-center">Why TimeWise Is Different</p>
+        <h2 class="section-title section-title-center">Not another planner. Not another tracker.</h2>
+
+        <div class="grid grid-2">
+          <div class="compare-card compare-not">
+            <h3>Typical planners &amp; trackers</h3>
+            <ul>
+              <li>Log tasks and due dates</li>
+              <li>Assume you already know what to do</li>
+              <li>Offer little reflection or feedback</li>
+              <li>Can feel like one more chore</li>
+            </ul>
+          </div>
+          <div class="compare-card compare-yes">
+            <h3>TimeWise</h3>
+            <ul>
+              <li>Helps you notice where your time actually goes</li>
+              <li>Connects that reflection to your real goals and deadlines</li>
+              <li>Gives immediate, supportive feedback as you practice</li>
+              <li>Ends every session with a practical, realistic next step</li>
+            </ul>
+          </div>
+        </div>
+        <p class="section-lead section-lead-center why-different-close">
+          TimeWise combines self-awareness with practical support — so you don't just track your time,
+          you understand it and act on it.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ NEXT STEP ============ -->
+    <section class="section final-cta cta-band">
+      <div class="container final-cta-inner">
+        <h2>See it for yourself</h2>
+        <p>Load your own week, replan a messy day, and reflect on how it went.</p>
+        <div class="cta-band-buttons">
+          <a href="index.html#early-access" class="btn btn-primary btn-large">Get Early Access</a>
+          <a href="try.html" class="btn btn-on-dark btn-large">Try the demo</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <span class="logo-mark" aria-hidden="true">⏳</span>
+        <span class="logo-text">TimeWise</span>
+        <p>A time management skill-practice app concept for college students.</p>
+      </div>
+
+      <nav class="footer-nav" aria-label="Footer navigation">
+        <a href="index.html">Home</a>
+        <a href="about.html" aria-current="page">The Idea</a>
+        <a href="try.html">Try It</a>
+        <a href="practice.html">Practice</a>
+        <a href="index.html#early-access">Get Early Access</a>
+      </nav>
+    </div>
+    <div class="container footer-bottom">
+      <p>TimeWise is a student project concept — built to explore how reflection and practical planning can go hand in hand. 🌱</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+
+  <!--
+    Cloudflare Web Analytics — free, cookie-free page-view tracking (no consent
+    banner needed). This snippet is a placeholder: it won't send real data until
+    you swap in your own token.
+
+    To get one: Cloudflare dashboard → Analytics & Logs → Web Analytics →
+    "Add a site" → enter this site's hostname → Cloudflare gives you a snippet
+    with a real token in it. Copy that whole <script> tag in place of this one
+    (same spot works whether you deploy to Cloudflare or GitHub Pages — this is
+    just a JS beacon, not something that requires being proxied through Cloudflare).
+  -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "YOUR_CLOUDFLARE_WEB_ANALYTICS_TOKEN"}'></script>
+</body>
+</html>

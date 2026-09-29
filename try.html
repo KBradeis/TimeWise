@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Try It — TimeWise</title>
+  <meta name="description" content="Try TimeWise with your own week: connect Google Calendar or Notion, replan a day that went sideways, and reflect on what actually happened." />
+
+  <!--
+    Social preview (Open Graph + Twitter Card): the URLs below assume the
+    GitHub Pages address from the README. If you deploy somewhere else
+    (a Cloudflare domain, a custom domain, etc.), update the four URLs
+    in this block to match — link previews on iMessage/Slack/Twitter/etc.
+    fetch og:image directly, so it needs to be a real, absolute URL.
+  -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="TimeWise" />
+  <meta property="og:title" content="Try It — TimeWise" />
+  <meta property="og:description" content="Try TimeWise with your own week: connect Google Calendar or Notion, replan a day that went sideways, and reflect on what actually happened." />
+  <meta property="og:url" content="https://kbradeis.github.io/TimeWise/try.html" />
+  <meta property="og:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Try It — TimeWise" />
+  <meta name="twitter:description" content="Try TimeWise with your own week: connect Google Calendar or Notion, replan a day that went sideways, and reflect on what actually happened." />
+  <meta name="twitter:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
+  <meta name="twitter:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+
+  <!-- Favicon (SVG for modern browsers, .ico fallback for older ones) -->
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="alternate icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
+  <!-- Friendly rounded font, with solid system-font fallback if offline -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ============ HEADER / NAV ============
+       Same on every page (index, about, try, practice) — edit all four together. -->
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="index.html" class="logo" aria-label="TimeWise home">
+        <span class="logo-mark" aria-hidden="true">⏳</span>
+        <span class="logo-text">TimeWise</span>
+      </a>
+
+      <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="primaryNav" aria-label="Toggle navigation menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="primary-nav" id="primaryNav">
+        <a href="about.html">The Idea</a>
+        <a href="try.html" aria-current="page">Try It</a>
+        <a href="practice.html">Practice</a>
+        <a href="index.html#early-access" class="btn btn-primary btn-small">Get Early Access</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ PAGE INTRO ============ -->
+    <section class="page-hero">
+      <div class="container">
+        <p class="eyebrow">Try It</p>
+        <h1>Your week, <span class="text-gradient">in one calm view.</span></h1>
+        <p class="page-hero-lead">Load your schedule, replan when things change, and reflect on how it went. It starts with Maya's sample week — swap in your own anytime. Nothing is saved when you leave the page.</p>
+        <nav class="page-jumps" aria-label="On this page">
+          <a href="#calendars"><span>1</span> Your week</a>
+          <a href="#replan"><span>2</span> Replan</a>
+          <a href="#reality"><span>3</span> Reflect</a>
+        </nav>
+      </div>
+    </section>
+
+    <!-- ============ CONNECT YOUR CALENDARS ============ -->
+    <section id="calendars" class="section calendars">
+      <div class="container">
+        <p class="eyebrow eyebrow-center">Step 1 · Your week</p>
+        <h2 class="section-title section-title-center">Connect every part of your schedule</h2>
+        <p class="section-lead section-lead-center">
+          Classes, shifts, club meetings, and deadlines — however your calendar lives today. Add an event,
+          connect a calendar, or upload a calendar file and watch your week take shape.
+        </p>
+
+        <!-- Live "this week" grid — fed by the quick-add form, the .ics upload, and the preview connects -->
+        <div class="week-grid-wrap">
+          <div class="week-grid-header">
+            <div>
+              <h3 class="calendar-panel-heading week-grid-title">Your week</h3>
+              <p class="week-grid-note" id="weekGridNote"></p>
+            </div>
+            <button type="button" class="week-clear-btn" id="weekClearBtn">Clear my week</button>
+          </div>
+          <div class="week-grid" id="weekGrid"></div>
+          <div class="week-grid-legend">
+            <span class="week-legend-item"><span class="week-legend-dot week-event-class"></span>Class</span>
+            <span class="week-legend-item"><span class="week-legend-dot week-event-assignment"></span>Assignment</span>
+            <span class="week-legend-item"><span class="week-legend-dot week-event-personal"></span>Personal</span>
+            <span class="week-legend-item"><span class="week-legend-dot week-event-timewise"></span>TimeWise suggestion</span>
+          </div>
+        </div>
+
+        <div class="calendar-connect-panel">
+          <h3 class="calendar-panel-heading">Add an event</h3>
+          <p class="calendar-panel-sub">
+            Type in a class, shift, or deadline — it drops straight into the grid above.
+          </p>
+          <form class="quick-add-form" id="quickAddForm">
+            <div class="quick-add-row">
+              <label class="quick-add-field quick-add-field-title">
+                <span>Title</span>
+                <input type="text" id="quickAddTitle" placeholder="e.g. BUS 131A Lecture" maxlength="60" required />
+              </label>
+              <label class="quick-add-field quick-add-field-category">
+                <span>Type</span>
+                <select id="quickAddCategory">
+                  <option value="class">Class</option>
+                  <option value="assignment">Assignment</option>
+                  <option value="personal">Personal</option>
+                </select>
+              </label>
+            </div>
+            <div class="quick-add-row">
+              <label class="quick-add-field">
+                <span>Date</span>
+                <input type="date" id="quickAddDate" required />
+              </label>
+              <label class="quick-add-field">
+                <span>Start time</span>
+                <input type="time" id="quickAddStart" required />
+              </label>
+              <label class="quick-add-field">
+                <span>End time <small>(optional)</small></span>
+                <input type="time" id="quickAddEnd" />
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary quick-add-submit">+ Add to my week</button>
+          </form>
+          <p class="ics-status" id="quickAddStatus" aria-live="polite"></p>
+
+          <div class="calendar-divider"><span>or</span></div>
+
+          <h3 class="calendar-panel-heading">Connect your calendars</h3>
+          <p class="calendar-panel-sub">
+            Read-only: TimeWise just reads this week's events to show them here, and never changes anything
+            in your account.
+          </p>
+          <div class="calendar-providers">
+            <button type="button" class="provider-btn" data-provider="google" data-label="Google Calendar">
+              <span class="provider-icon">🗓️</span> Connect Google Calendar
+            </button>
+            <button type="button" class="provider-btn" data-provider="notion" data-label="Notion">
+              <span class="provider-icon">📝</span> Connect Notion
+            </button>
+          </div>
+          <p class="provider-status-note" id="providerStatusNote" aria-live="polite"></p>
+
+          <div class="calendar-divider"><span>or</span></div>
+
+          <h3 class="calendar-panel-heading">Upload a calendar file</h3>
+          <p class="calendar-panel-sub">
+            This one's real: works with Apple Calendar, Samsung Calendar, Outlook, Moodle, or anything that
+            exports a standard <strong>.ics</strong> file. It's read entirely in your browser and never
+            leaves your device.
+          </p>
+          <label for="icsFileInput" class="ics-upload-area">
+            <span class="ics-upload-icon" aria-hidden="true">📅</span>
+            <span class="ics-upload-text">
+              <strong>Choose a .ics calendar file</strong>
+              <small>Exported from Apple Calendar, Samsung Calendar, Outlook, Google Calendar, Moodle, and more</small>
+            </span>
+            <input type="file" id="icsFileInput" accept=".ics,text/calendar" />
+          </label>
+          <p class="ics-status" id="icsStatus" aria-live="polite"></p>
+        </div>
+
+        <p class="calendar-disclaimer">
+          Google Calendar and Notion connections are read-only and only fetch this week. Google events go
+          straight from Google to your browser; Notion items pass through this site's small server on their
+          way to you, and nothing is stored there. Your Notion sign-in is kept in a secure cookie in your
+          browser for 7 days. Everything on the grid disappears when you leave the page.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ REPLAN MY DAY ============
+         Storyboard Screen 3, working. Reads the same "Your week" events; script.js
+         (section 15) reshuffles the rest of a day around fixed commitments. -->
+    <section id="replan" class="section replan">
+      <div class="container">
+        <p class="eyebrow eyebrow-center">Step 2 · Replan</p>
+        <h2 class="section-title section-title-center">Replan the rest of your day in seconds</h2>
+        <p class="section-lead section-lead-center">
+          Running late? Something new came up? Tell TimeWise what changed. It keeps your fixed commitments
+          where they are, reshuffles everything else, and moves what won't fit to tomorrow, so the rest of
+          your day is still realistic.
+        </p>
+
+        <div class="reality-panel replan-panel">
+          <div class="replan-body">
+            <form class="replan-form" id="replanForm">
+              <div class="reality-checkin-head">
+                <h3 class="calendar-panel-heading">What changed?</h3>
+                <button type="button" class="reality-example-btn" id="replanExampleBtn">Try Maya's messy Monday</button>
+              </div>
+
+              <div class="quick-add-row">
+                <label class="quick-add-field">
+                  <span>Day</span>
+                  <select id="replanDay"></select>
+                </label>
+                <label class="quick-add-field">
+                  <span>Right now it's</span>
+                  <input type="time" id="replanNow" step="300" required />
+                </label>
+              </div>
+
+              <div class="quick-add-row">
+                <label class="quick-add-field">
+                  <span>I'm running behind by</span>
+                  <select id="replanDelay">
+                    <option value="0">Not behind</option>
+                    <option value="15">15 min</option>
+                    <option value="30" selected>30 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60">1 hour</option>
+                    <option value="90">1.5 hours</option>
+                  </select>
+                </label>
+                <label class="quick-add-field">
+                  <span>Stop working by</span>
+                  <input type="time" id="replanEndBy" value="22:00" step="900" required />
+                </label>
+              </div>
+
+              <div class="quick-add-row">
+                <label class="quick-add-field quick-add-field-title">
+                  <span>Something new came up <small>(optional)</small></span>
+                  <input type="text" id="replanNewTitle" maxlength="60" placeholder="e.g. Call back internship recruiter" />
+                </label>
+                <label class="quick-add-field">
+                  <span>How long?</span>
+                  <select id="replanNewLength">
+                    <option value="15">15 min</option>
+                    <option value="30" selected>30 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60">1 hour</option>
+                    <option value="90">1.5 hours</option>
+                    <option value="120">2 hours</option>
+                  </select>
+                </label>
+              </div>
+
+              <h4 class="replan-subheading">What's left today</h4>
+              <p class="calendar-panel-sub">Tap a block to switch it between <strong>📌 fixed time</strong> and <strong>↔ can move</strong>.</p>
+              <ul class="replan-blocks" id="replanBlocks"></ul>
+
+              <button type="submit" class="btn btn-primary btn-full" id="replanBtn">Replan the rest of my day</button>
+            </form>
+
+            <div class="reality-result replan-result" id="replanResult" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PLAN VS. REALITY ============
+         Reads the same "Your week" events as the section above. Visitors mark
+         what really happened to each block; script.js (section 14) turns that
+         into one insight + one next step that can be added to the next day. -->
+    <section id="reality" class="section reality">
+      <div class="container">
+        <p class="eyebrow eyebrow-center">Step 3 · Reflect</p>
+        <h2 class="section-title section-title-center">See where your day actually went</h2>
+        <p class="section-lead section-lead-center">
+          Pick a day, mark what really happened to each block, and TimeWise turns it into one honest
+          insight and one realistic next step — then drops that step straight into tomorrow.
+        </p>
+
+        <div class="reality-panel">
+          <div class="reality-day-tabs" id="realityDayTabs" role="group" aria-label="Choose a day to reflect on"></div>
+
+          <div class="reality-body">
+            <div class="reality-checkin">
+              <div class="reality-checkin-head">
+                <h3 class="calendar-panel-heading" id="realityDayTitle">Today</h3>
+                <button type="button" class="reality-example-btn" id="realityExampleBtn">Try Maya's example</button>
+              </div>
+              <p class="calendar-panel-sub">For each block you planned, what actually happened?</p>
+              <p class="reality-future-note" id="realityFutureNote" hidden>This day hasn't happened yet — feel free to try the check-in anyway.</p>
+              <ol class="reality-list" id="realityList"></ol>
+              <button type="button" class="btn btn-primary btn-full" id="realityReflectBtn" disabled>See my reflection</button>
+            </div>
+
+            <div class="reality-result" id="realityResult" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <p class="calendar-disclaimer">
+          Reflections come from simple, transparent rules in this page — no AI service, no account,
+          and nothing leaves your browser.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ NEXT STEP ============ -->
+    <section class="section final-cta cta-band">
+      <div class="container final-cta-inner">
+        <h2>Want the real thing?</h2>
+        <p>Join the early-access list — it takes 20 seconds and shapes what gets built first.</p>
+        <div class="cta-band-buttons">
+          <a href="index.html#early-access" class="btn btn-primary btn-large">Get Early Access</a>
+          <a href="practice.html" class="btn btn-on-dark btn-large">Try a practice session</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <span class="logo-mark" aria-hidden="true">⏳</span>
+        <span class="logo-text">TimeWise</span>
+        <p>A time management skill-practice app concept for college students.</p>
+      </div>
+
+      <nav class="footer-nav" aria-label="Footer navigation">
+        <a href="index.html">Home</a>
+        <a href="about.html">The Idea</a>
+        <a href="try.html" aria-current="page">Try It</a>
+        <a href="practice.html">Practice</a>
+        <a href="index.html#early-access">Get Early Access</a>
+      </nav>
+    </div>
+    <div class="container footer-bottom">
+      <p>TimeWise is a student project concept — built to explore how reflection and practical planning can go hand in hand. 🌱</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+
+  <!--
+    Cloudflare Web Analytics — free, cookie-free page-view tracking (no consent
+    banner needed). This snippet is a placeholder: it won't send real data until
+    you swap in your own token.
+
+    To get one: Cloudflare dashboard → Analytics & Logs → Web Analytics →
+    "Add a site" → enter this site's hostname → Cloudflare gives you a snippet
+    with a real token in it. Copy that whole <script> tag in place of this one
+    (same spot works whether you deploy to Cloudflare or GitHub Pages — this is
+    just a JS beacon, not something that requires being proxied through Cloudflare).
+  -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "YOUR_CLOUDFLARE_WEB_ANALYTICS_TOKEN"}'></script>
+</body>
+</html>

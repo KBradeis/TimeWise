@@ -364,7 +364,7 @@ function redirect(location) {
 // closes itself (so events already on the grid are kept). Otherwise the visitor
 // is redirected back to the Calendars section with a status flag the page reads.
 function backToSite(url, result, reason, clearState, popup) {
-  const target = new URL("/", url.origin);
+  const target = new URL("/try.html", url.origin); // the page with the calendar section
   target.searchParams.set("notion", result);
   if (reason) target.searchParams.set("reason", reason);
   target.hash = "calendars";
