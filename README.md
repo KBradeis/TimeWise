@@ -28,7 +28,9 @@ starts the calendar, Replan, and reflection features on a page that has the week
 **Accounts, feedback & admin:** testers can sign in with Google, have their week on Try It saved to their
 account, and send feedback from the 💬 button on every page. `account.html` shows a tester's own data and
 `admin.html` is the admin dashboard. Setup, security, costs, and rollback are in
-**[`ACCOUNTS_SETUP.md`](ACCOUNTS_SETUP.md)**, and progress is tracked in `ACCOUNTS_WORKPLAN.md`.
+**[`ACCOUNTS_SETUP.md`](ACCOUNTS_SETUP.md)**, and progress is tracked in `ACCOUNTS_WORKPLAN.md`. The admin dashboard's product-improvement workflow
+(real vs. test data, problems, experiments, decision log, copy-for-AI export) is explained in
+**[`PRODUCT_LOOP.md`](PRODUCT_LOOP.md)**.
 
 Section by section:
 
@@ -95,10 +97,12 @@ TimeWise/
 ├── account.html / account.js  # My account: profile, saved weeks, my feedback, delete account
 ├── admin.html / admin.js      # Admin dashboard (server checks the admin role)
 ├── server/accounts.js       # Google sign-in, sessions, saved weeks, feedback, admin API (imported by worker.js)
+├── server/insights.js       # Admin-only product-insights API: problems, experiments, decisions, observations
 ├── migrations/              # D1 database migrations (0001_accounts.sql)
 ├── tests/                   # Security tests + local test server + browser walk-through (not published)
 ├── ACCOUNTS_SETUP.md        # How the account system works, setup, testing, rollback, cost
 ├── ACCOUNTS_WORKPLAN.md     # Checklist of what's done and what's left
+├── PRODUCT_LOOP.md          # How feedback becomes problems, experiments, and decisions (admin dashboard + Claude)
 ├── results.html             # Private results page for early-access answers + feature counts (needs ADMIN_KEY)
 ├── 404.html                 # Custom "page not found" page (Cloudflare + GitHub Pages)
 ├── styles.css                # All styling: layout, color system, responsive rules

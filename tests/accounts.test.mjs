@@ -9,7 +9,7 @@ import worker from '../worker.js';
 function makeD1() {
   const db = new DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = ON;');
-  db.exec(fs.readFileSync(new URL('../migrations/0001_accounts.sql', import.meta.url), 'utf8'));
+  for (const m of fs.readdirSync(new URL('../migrations/', import.meta.url)).filter((n) => n.endsWith('.sql')).sort()) db.exec(fs.readFileSync(new URL('../migrations/' + m, import.meta.url), 'utf8'));
   const stmt = (sql, args = []) => ({
     bind: (...a) => stmt(sql, a),
     run: async () => { db.prepare(sql).run(...args); return { success: true }; },
@@ -239,7 +239,9 @@ check('Admin overview works', r.status === 200 && r.data.users.total >= 4 && r.d
 r = await call('/api/admin/users', { cookie: ADMIN.session });
 check('Admin user list works and never includes session data', r.status === 200 && r.data.users.length >= 4 && r.data.users.every((u) => !('google_sub' in u) && !('id' in u)));
 r = await call('/api/admin/feedback?status=new&category=confusing', { cookie: ADMIN.session });
-check('Admin feedback filters work', r.status === 200 && r.data.feedback.length === 1 && r.data.feedback[0].user_email === 'user.a@example.com');
+check('Admin feedback filters work', r.status === 200 && r.data.feedback.length === 1 && r.data.feedback[0].category === 'confusing');
+check('Inbox shows an anonymous tester code, never a name, email, or user ID', /^T-[0-9a-f]{5}$/.test(r.data.feedback[0].tester) &&
+  !/user\.a@example\.com|User A|user_id|"email"/.test(JSON.stringify(r.data)));
 r = await call("/api/admin/feedback?status=new' OR 1=1--", { cookie: ADMIN.session });
 check('Injection attempt in filter rejected', r.status === 400);
 r = await call('/api/admin/feedback/' + fbA, { method: 'PATCH', cookie: ADMIN.session, body: { status: 'reviewing', adminNotes: 'Rename "fixed" to "can\'t move"?' } });

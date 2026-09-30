@@ -29,6 +29,8 @@
      GOOGLE_AUTH_CLIENT_SECRET  (secret)
    ========================================================================== */
 
+import { handleInsightsApi, FEEDBACK_SOURCES, JOURNEY_STAGES } from "./insights.js";
+
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
@@ -105,6 +107,14 @@ export async function handleAccountsApi(request, env, url) {
     if (path === "/api/admin/feedback" && method === "GET") return respond(await adminFeedback(env, url));
     const match = path.match(/^\/api\/admin\/feedback\/(\d{1,10})$/);
     if (match && method === "PATCH") return respond(await adminUpdateFeedback(request, env, user, Number(match[1])));
+    // Problems, experiments, decisions, observations (server/insights.js)
+    const insights = await handleInsightsApi(request, env, url, user, {
+      json, readJson, FEEDBACK_FEATURES,
+      audit: (actor, action, target, detail) => env.DB.prepare(
+        "INSERT INTO audit_log (actor_user_id, action, target, detail) VALUES (?1, ?2, ?3, ?4)"
+      ).bind(actor, action, target || null, detail || null).run()
+    });
+    if (insights) return respond(insights);
     return json({ error: "not_found" }, 404);
   }
 
@@ -415,20 +425,22 @@ async function deleteAccount(request, env, user) {
 /* ---------- Admin ---------- */
 
 async function adminOverview(env) {
-  const [users, newUsers, active, byStatus, byCategory, byFeature, signups, visitors, tried, events] = await env.DB.batch([
+  const [users, newUsers, active, byStatus, byCategory, byFeature, signups, visitors, tried, events, nonReal] = await env.DB.batch([
     env.DB.prepare("SELECT COUNT(*) AS n FROM users"),
     env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE created_at >= datetime('now', '-7 days')"),
     env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE last_login_at >= datetime('now', '-7 days')"),
-    env.DB.prepare("SELECT status AS k, COUNT(*) AS n FROM feedback GROUP BY status"),
-    env.DB.prepare("SELECT category AS k, COUNT(*) AS n FROM feedback GROUP BY category"),
+    // Headline feedback numbers count REAL tester feedback only (not observations, test, or automated items)
+    env.DB.prepare("SELECT status AS k, COUNT(*) AS n FROM feedback WHERE source = 'real' GROUP BY status"),
+    env.DB.prepare("SELECT category AS k, COUNT(*) AS n FROM feedback WHERE source = 'real' GROUP BY category"),
     env.DB.prepare(
       `SELECT feature AS k, COUNT(*) AS n,
               SUM(CASE WHEN category IN ('confusing', 'broken') THEN 1 ELSE 0 END) AS problems
-       FROM feedback GROUP BY feature ORDER BY n DESC`),
+       FROM feedback WHERE source = 'real' GROUP BY feature ORDER BY n DESC`),
     env.DB.prepare("SELECT COUNT(*) AS n FROM signups"),
     env.DB.prepare("SELECT COUNT(DISTINCT visitor_id) AS n FROM events"),
     env.DB.prepare("SELECT COUNT(DISTINCT visitor_id) AS n FROM events WHERE event NOT IN ('visit', 'waitlist_joined')"),
-    env.DB.prepare("SELECT event AS k, COUNT(*) AS n FROM events GROUP BY event")
+    env.DB.prepare("SELECT event AS k, COUNT(*) AS n FROM events GROUP BY event"),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM feedback WHERE source <> 'real'")
   ]);
   const first = (r) => ((r.results || [])[0] || {}).n || 0;
   const map = (r) => Object.fromEntries((r.results || []).map((row) => [row.k, row.n]));
@@ -437,7 +449,8 @@ async function adminOverview(env) {
     feedback: {
       byStatus: map(byStatus),
       byCategory: map(byCategory),
-      byFeature: (byFeature.results || []).map((r) => ({ feature: r.k, total: r.n, problems: r.problems || 0 }))
+      byFeature: (byFeature.results || []).map((r) => ({ feature: r.k, total: r.n, problems: r.problems || 0 })),
+      nonRealItems: first(nonReal)
     },
     earlyAccess: { responses: first(signups), visitors: first(visitors), triedDemo: first(tried), features: map(events) }
   });
@@ -453,10 +466,12 @@ async function adminUsers(env) {
   return json({ users: rows.results || [] });
 }
 
+// Feedback for the admin inbox. Testers appear only as anonymous account codes (e.g. "T-3fa91"):
+// analysis needs what happened, not who said it. Codes identify an account, not a verified person.
 async function adminFeedback(env, url) {
   const where = [];
   const args = [];
-  const filters = { status: FEEDBACK_STATUSES, category: FEEDBACK_CATEGORIES, feature: FEEDBACK_FEATURES };
+  const filters = { status: FEEDBACK_STATUSES, category: FEEDBACK_CATEGORIES, feature: FEEDBACK_FEATURES, source: FEEDBACK_SOURCES };
   for (const [name, allowed] of Object.entries(filters)) {
     const value = url.searchParams.get(name);
     if (!value) continue;
@@ -464,14 +479,29 @@ async function adminFeedback(env, url) {
     args.push(value);
     where.push("f." + name + " = ?" + args.length); // column names come from the fixed list above
   }
+  const problem = url.searchParams.get("problem");
+  if (problem === "none") where.push("f.problem_id IS NULL");
+  else if (problem) {
+    if (!/^\d{1,10}$/.test(problem)) return json({ error: "bad_filter" }, 400);
+    args.push(Number(problem));
+    where.push("f.problem_id = ?" + args.length);
+  }
   const rows = await env.DB.prepare(
-    `SELECT f.id, f.category, f.feature, f.page, f.rating, f.message, f.status, f.admin_notes,
-            f.created_at, f.updated_at, u.name AS user_name, u.email AS user_email
-     FROM feedback f LEFT JOIN users u ON u.id = f.user_id
+    `SELECT f.id, f.user_id, f.category, f.feature, f.page, f.rating, f.message, f.status, f.admin_notes,
+            f.source, f.problem_id, f.journey_stage, f.user_type, f.created_at, f.updated_at
+     FROM feedback f
      ${where.length ? "WHERE " + where.join(" AND ") : ""}
-     ORDER BY f.id DESC LIMIT 300`
+     ORDER BY f.id DESC LIMIT 500`
   ).bind(...args).all();
-  return json({ feedback: rows.results || [] });
+  const codes = {};
+  const feedback = [];
+  for (const row of rows.results || []) {
+    const { user_id: uid, ...rest } = row;
+    if (uid && !codes[uid]) codes[uid] = "T-" + (await sha256Hex("tester:" + uid)).slice(0, 5);
+    rest.tester = row.source === "observation" ? "Observation" : uid ? codes[uid] : "Deleted account";
+    feedback.push(rest);
+  }
+  return json({ feedback });
 }
 
 async function adminUpdateFeedback(request, env, admin, id) {
@@ -489,6 +519,27 @@ async function adminUpdateFeedback(request, env, admin, id) {
     }
     args.push(body.adminNotes ? body.adminNotes.trim() : null); sets.push("admin_notes = ?" + args.length);
   }
+  if (body.source !== undefined) {
+    if (!FEEDBACK_SOURCES.includes(body.source)) return json({ error: "bad_source" }, 400);
+    args.push(body.source); sets.push("source = ?" + args.length);
+  }
+  if (body.journeyStage !== undefined) {
+    if (body.journeyStage !== null && !JOURNEY_STAGES.includes(body.journeyStage)) return json({ error: "bad_stage" }, 400);
+    args.push(body.journeyStage); sets.push("journey_stage = ?" + args.length);
+  }
+  if (body.userType !== undefined) {
+    if (body.userType !== null && (typeof body.userType !== "string" || body.userType.length > 60)) return json({ error: "bad_user_type" }, 400);
+    args.push(body.userType ? body.userType.trim() || null : null); sets.push("user_type = ?" + args.length);
+  }
+  if (body.problemId !== undefined) {
+    let pid = null;
+    if (body.problemId !== null && body.problemId !== "") {
+      pid = Number(body.problemId);
+      const exists = Number.isInteger(pid) && pid > 0 && await env.DB.prepare("SELECT id FROM problems WHERE id = ?1").bind(pid).first();
+      if (!exists) return json({ error: "bad_problem" }, 400);
+    }
+    args.push(pid); sets.push("problem_id = ?" + args.length);
+  }
   if (!sets.length) return json({ error: "nothing_to_update" }, 400);
   args.push(id);
   const updated = await env.DB.prepare(
@@ -496,7 +547,7 @@ async function adminUpdateFeedback(request, env, admin, id) {
   ).bind(...args).first();
   if (!updated) return json({ error: "not_found" }, 404);
   await env.DB.prepare("INSERT INTO audit_log (actor_user_id, action, target, detail) VALUES (?1, 'feedback.update', ?2, ?3)")
-    .bind(admin.id, String(id), body.status !== undefined ? "status=" + body.status : "notes").run();
+    .bind(admin.id, String(id), Object.keys(body).filter((k) => ["status", "adminNotes", "source", "problemId", "journeyStage", "userType"].includes(k)).join(",")).run();
   return json({ ok: true });
 }
 
