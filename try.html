@@ -164,6 +164,11 @@
             </button>
           </div>
           <p class="provider-status-note" id="providerStatusNote" aria-live="polite"></p>
+          <p class="calendar-panel-sub provider-unverified-note">
+            Heads up: TimeWise is a student project, so Google shows a <em>"Google hasn't verified this app"</em>
+            screen. Click <strong>Advanced → Go to TimeWise</strong> to continue. It only asks to <em>see</em> your
+            calendar. Rather not? Use the calendar file upload below instead.
+          </p>
 
           <div class="calendar-divider"><span>or</span></div>
 
@@ -182,6 +187,15 @@
             <input type="file" id="icsFileInput" accept=".ics,text/calendar" />
           </label>
           <p class="ics-status" id="icsStatus" aria-live="polite"></p>
+          <details class="ics-help">
+            <summary>How do I get a .ics file from Google Calendar?</summary>
+            <ol>
+              <li>On a computer, open <strong>calendar.google.com</strong> → ⚙️ <strong>Settings</strong>.</li>
+              <li>Choose <strong>Import &amp; export</strong> → <strong>Export</strong>. A .zip file downloads.</li>
+              <li>Open the .zip. Each calendar is its own .ics file (your main one is named after your email).</li>
+              <li>Upload that file above. To refresh later, export and upload again.</li>
+            </ol>
+          </details>
         </div>
 
         <p class="calendar-disclaimer">

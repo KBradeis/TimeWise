@@ -926,6 +926,21 @@ input:focus-visible {
   color: var(--green-dark);
 }
 
+.ics-help {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.ics-help summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.ics-help ol {
+  margin: 8px 0 0;
+  padding-left: 1.3em;
+}
+.ics-help li { margin: 4px 0; }
+
 .calendar-events-preview {
   margin-top: 20px;
   background: var(--bg-alt);
@@ -3489,4 +3504,9 @@ section[id] {
   .reality-choices {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.provider-unverified-note {
+  margin-top: 8px;
+  font-size: 0.85rem;
 }

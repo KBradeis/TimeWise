@@ -791,7 +791,7 @@
      connection isn't set up on this copy of the site (no Client ID yet, or
      running on GitHub Pages / locally), its button falls back to the old
      preview with clearly labeled sample events, so the page never breaks. */
-  var GOOGLE_CLIENT_ID = ""; // e.g. "123456789-abc123.apps.googleusercontent.com"
+  var GOOGLE_CLIENT_ID = "492214082626-5a6bpa473fflej1ebaseiurktropul02.apps.googleusercontent.com"; // e.g. "123456789-abc123.apps.googleusercontent.com"
   var GOOGLE_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
   var MAX_GOOGLE_CALENDARS = 10;
 
