@@ -5,7 +5,8 @@
    7. Quiz rendering & answer handling  8. Summary rendering  9. Event wiring
    10. Your Week grid  11. Quick add  12. Google Calendar + Notion
    13. .ics upload  14. Plan vs. Reality  15. Replan my day
-   16. Early access + anonymous feature counts
+   16. Early access + anonymous feature counts  17. Accounts (sign-in link,
+   feedback button, saving your week)
    ========================================================================== */
 
 (function () {
@@ -680,6 +681,7 @@
     }
 
     if (weekClearBtn) weekClearBtn.textContent = weekEvents.length ? "Clear my week" : "Load Maya's sample week";
+    scheduleWeekSave(); // no-op unless signed in on try.html
     if (weekGridNote) {
       var hasSample = weekEvents.some(function (ev) { return ev.source === "sample"; });
       weekGridNote.textContent = hasSample
@@ -1799,6 +1801,7 @@
             ev.reality.detail = Number(select.value);
             delete realityState.added[day];
             renderRealityResult();
+            scheduleWeekSave();
           });
         } else {
           select = buildSelect(REALITY_REASONS, ev.reality.detail, "What got in the way of " + ev.title);
@@ -1806,6 +1809,7 @@
             ev.reality.detail = select.value;
             delete realityState.added[day];
             renderRealityResult();
+            scheduleWeekSave();
           });
         }
         detail.appendChild(select);
@@ -2467,6 +2471,523 @@
     });
   }
 
+  /* ---------- 17. Accounts: sign-in link, feedback button, saving your week ----------
+     Talks to the Worker's /api/auth, /api/me, and /api/feedback routes
+     (server/accounts.js). The server decides who you are from an HttpOnly
+     cookie this script can't read; nothing about sign-in is stored in the
+     browser. If the API isn't available (GitHub Pages, a local file) or
+     Google sign-in isn't set up yet, the sign-in link and Feedback button
+     simply don't appear, and the rest of the site works as before. */
+  var account = { available: false, signedIn: false, configured: false, user: null };
+  var weekSync = { enabled: false, timer: null, lastSaved: null, statusEl: null };
+
+  var FEEDBACK_FEATURES = [
+    ["home", "Home page"], ["the_idea", "The Idea page"], ["your_week", "Your week"],
+    ["calendars", "Connecting a calendar"], ["replan", "Replan my day"], ["reflect", "Plan vs. Reality"],
+    ["practice", "Practice quiz"], ["early_access", "Early access form"], ["account", "My account"], ["other", "Something else"]
+  ];
+  var FEEDBACK_CATEGORIES = [
+    ["worked_well", "👍", "Something worked well", "What did you like? What made it work for you?"],
+    ["confusing", "🤔", "Something was confusing", "What were you trying to do, and where did you get stuck?"],
+    ["broken", "🐞", "Something didn't work", "What did you click, what did you expect, and what happened instead?"],
+    ["idea", "💡", "I'd change something", "What would you change or add, and why?"]
+  ];
+  var SIGNIN_MESSAGES = {
+    ok: "You're signed in.",
+    cancelled: "Sign-in was cancelled — nothing changed.",
+    expired: "That sign-in expired. Please try again.",
+    too_many: "Too many sign-in attempts. Please wait a few minutes.",
+    suspended: "This account can't sign in right now.",
+    not_configured: "Sign-in isn't switched on for this copy of the site yet.",
+    google_error: "Google didn't finish the sign-in. Please try again.",
+    invalid_token: "Google's sign-in response didn't check out. Please try again."
+  };
+
+  function pageKey() {
+    var p = window.location.pathname.replace(/\.html$/, "").replace(/\/+$/, "");
+    return p === "" || p === "/index" ? "/" : p;
+  }
+
+  function defaultFeature() {
+    return { "/": "home", "/about": "the_idea", "/try": "your_week", "/practice": "practice", "/account": "account" }[pageKey()] || "other";
+  }
+
+  function signInUrl(returnPath) {
+    var target = returnPath || (window.location.pathname + window.location.hash);
+    return "/api/auth/login?return=" + encodeURIComponent(target);
+  }
+
+  function apiJson(url, options) {
+    return fetch(url, Object.assign({ credentials: "same-origin" }, options || {})).then(function (res) {
+      var isJson = (res.headers.get("Content-Type") || "").indexOf("application/json") !== -1;
+      return (isJson ? res.json() : Promise.resolve(null)).then(function (body) {
+        return { ok: res.ok, status: res.status, body: body || {} };
+      });
+    });
+  }
+
+  function showToast(text, kind) {
+    var toast = document.createElement("div");
+    toast.className = "tw-toast" + (kind ? " is-" + kind : "");
+    toast.setAttribute("role", "status");
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.classList.add("is-leaving"); }, 3500);
+    setTimeout(function () { toast.remove(); }, 4000);
+  }
+
+  // Shows the result of a sign-in that just redirected back here, then tidies the URL
+  function handleSignInReturn() {
+    var params = new URLSearchParams(window.location.search);
+    var result = params.get("signin");
+    if (!result) return;
+    showToast(SIGNIN_MESSAGES[result] || "Sign-in didn't finish. Please try again.", result === "ok" ? "success" : "error");
+    params.delete("signin");
+    var query = params.toString();
+    if (window.history.replaceState) {
+      window.history.replaceState(null, "", window.location.pathname + (query ? "?" + query : "") + window.location.hash);
+    }
+  }
+
+  /* ----- Header: Sign in / account menu ----- */
+  function renderNavAccount() {
+    var nav = document.getElementById("primaryNav");
+    if (!nav || !account.available || (!account.signedIn && !account.configured)) return;
+    var old = nav.querySelector(".nav-auth");
+    if (old) old.remove();
+    var cta = nav.querySelector(".btn");
+
+    var wrap = document.createElement("div");
+    wrap.className = "nav-auth";
+    if (!account.signedIn) {
+      var link = document.createElement("a");
+      link.className = "nav-signin";
+      link.href = signInUrl();
+      link.textContent = "Sign in";
+      wrap.appendChild(link);
+    } else {
+      var first = (account.user.name || account.user.email || "Account").split(" ")[0];
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "nav-account-btn";
+      button.setAttribute("aria-expanded", "false");
+      button.setAttribute("aria-controls", "navAccountMenu");
+      button.textContent = "👤 " + first + " ▾";
+
+      var menu = document.createElement("div");
+      menu.className = "nav-account-menu";
+      menu.id = "navAccountMenu";
+      menu.hidden = true;
+      var who = document.createElement("p");
+      who.className = "nav-account-email";
+      who.textContent = account.user.email;
+      menu.appendChild(who);
+      var mine = document.createElement("a");
+      mine.href = "account.html";
+      mine.textContent = "My account";
+      menu.appendChild(mine);
+      if (account.user.role === "admin") {
+        var admin = document.createElement("a");
+        admin.href = "admin.html";
+        admin.textContent = "Admin dashboard";
+        menu.appendChild(admin);
+      }
+      var out = document.createElement("button");
+      out.type = "button";
+      out.textContent = "Sign out";
+      out.addEventListener("click", signOut);
+      menu.appendChild(out);
+
+      button.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = menu.hidden;
+        menu.hidden = !open;
+        button.setAttribute("aria-expanded", String(open));
+      });
+      document.addEventListener("click", function (e) {
+        if (!wrap.contains(e.target)) { menu.hidden = true; button.setAttribute("aria-expanded", "false"); }
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !menu.hidden) { menu.hidden = true; button.setAttribute("aria-expanded", "false"); button.focus(); }
+      });
+      wrap.appendChild(button);
+      wrap.appendChild(menu);
+    }
+    if (cta) nav.insertBefore(wrap, cta); else nav.appendChild(wrap);
+  }
+
+  function signOut() {
+    flushWeekSave();
+    apiJson("/api/auth/logout", { method: "POST" }).then(function () {
+      var key = pageKey();
+      window.location.href = key === "/account" || key === "/admin" ? "index.html" : window.location.pathname;
+    });
+  }
+
+  /* ----- Feedback button + dialog (every page) ----- */
+  var feedbackDialog = null;
+
+  function buildFeedbackDialog() {
+    var dialog = document.createElement("dialog");
+    dialog.className = "feedback-dialog";
+    dialog.setAttribute("aria-labelledby", "feedbackTitle");
+
+    var close = document.createElement("button");
+    close.type = "button";
+    close.className = "feedback-close";
+    close.setAttribute("aria-label", "Close");
+    close.textContent = "×";
+    close.addEventListener("click", function () { dialog.close(); });
+    dialog.appendChild(close);
+
+    var title = document.createElement("h2");
+    title.id = "feedbackTitle";
+    title.textContent = "Share feedback";
+    dialog.appendChild(title);
+
+    var body = document.createElement("div");
+    body.className = "feedback-body";
+    dialog.appendChild(body);
+
+    // Clicking the dimmed backdrop closes it
+    dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });
+    document.body.appendChild(dialog);
+    return dialog;
+  }
+
+  function renderFeedbackSignedOut(body) {
+    body.innerHTML = "";
+    var p = document.createElement("p");
+    p.className = "feedback-intro";
+    p.textContent = "TimeWise is being tested with real students, and your notes decide what gets fixed next. " +
+      "Sign in with Google first so we can link your feedback to your account.";
+    var a = document.createElement("a");
+    a.className = "btn btn-primary btn-full";
+    a.href = signInUrl(window.location.pathname + "#feedback");
+    a.textContent = "Sign in with Google";
+    var small = document.createElement("p");
+    small.className = "feedback-fineprint";
+    small.textContent = "We only get your name and email from Google — nothing from your Gmail, Drive, or calendar.";
+    body.appendChild(p);
+    body.appendChild(a);
+    body.appendChild(small);
+  }
+
+  function renderFeedbackForm(body) {
+    body.innerHTML = "";
+    var form = document.createElement("form");
+    form.className = "feedback-form";
+    form.noValidate = true;
+
+    var intro = document.createElement("p");
+    intro.className = "feedback-intro";
+    intro.textContent = "Thanks for testing! Short and honest is perfect.";
+    form.appendChild(intro);
+
+    // 1. What kind of feedback
+    var typeSet = document.createElement("fieldset");
+    typeSet.className = "feedback-types";
+    var typeLegend = document.createElement("legend");
+    typeLegend.textContent = "What's this about?";
+    typeSet.appendChild(typeLegend);
+    FEEDBACK_CATEGORIES.forEach(function (c) {
+      var label = document.createElement("label");
+      var input = document.createElement("input");
+      input.type = "radio";
+      input.name = "category";
+      input.value = c[0];
+      var span = document.createElement("span");
+      span.textContent = c[1] + " " + c[2];
+      label.appendChild(input);
+      label.appendChild(span);
+      typeSet.appendChild(label);
+    });
+    form.appendChild(typeSet);
+
+    // 2. Which part of the site
+    var featureLabel = document.createElement("label");
+    featureLabel.className = "quick-add-field";
+    var featureText = document.createElement("span");
+    featureText.textContent = "Which part of the site?";
+    var select = document.createElement("select");
+    select.name = "feature";
+    FEEDBACK_FEATURES.forEach(function (f) {
+      var o = document.createElement("option");
+      o.value = f[0];
+      o.textContent = f[1];
+      select.appendChild(o);
+    });
+    select.value = defaultFeature();
+    featureLabel.appendChild(featureText);
+    featureLabel.appendChild(select);
+    form.appendChild(featureLabel);
+
+    // 3. Message
+    var msgLabel = document.createElement("label");
+    msgLabel.className = "quick-add-field";
+    var msgText = document.createElement("span");
+    msgText.textContent = "Tell us more";
+    var textarea = document.createElement("textarea");
+    textarea.name = "message";
+    textarea.rows = 4;
+    textarea.maxLength = 2000;
+    textarea.placeholder = "Pick a type above, then tell us what happened.";
+    msgLabel.appendChild(msgText);
+    msgLabel.appendChild(textarea);
+    form.appendChild(msgLabel);
+    typeSet.addEventListener("change", function () {
+      var picked = form.querySelector('input[name="category"]:checked');
+      var match = FEEDBACK_CATEGORIES.filter(function (c) { return picked && c[0] === picked.value; })[0];
+      if (match) textarea.placeholder = match[3];
+    });
+
+    // 4. Optional rating
+    var rateSet = document.createElement("fieldset");
+    rateSet.className = "feedback-rating";
+    var rateLegend = document.createElement("legend");
+    rateLegend.textContent = "How is TimeWise so far? (optional)";
+    rateSet.appendChild(rateLegend);
+    ["1", "2", "3", "4", "5"].forEach(function (n) {
+      var label = document.createElement("label");
+      var input = document.createElement("input");
+      input.type = "radio";
+      input.name = "rating";
+      input.value = n;
+      var span = document.createElement("span");
+      span.textContent = n;
+      label.appendChild(input);
+      label.appendChild(span);
+      rateSet.appendChild(label);
+    });
+    var scale = document.createElement("small");
+    scale.textContent = "1 = frustrating · 5 = love it";
+    rateSet.appendChild(scale);
+    form.appendChild(rateSet);
+
+    var submit = document.createElement("button");
+    submit.type = "submit";
+    submit.className = "btn btn-primary btn-full";
+    submit.textContent = "Send feedback";
+    form.appendChild(submit);
+
+    var status = document.createElement("p");
+    status.className = "ics-status";
+    status.setAttribute("aria-live", "polite");
+    form.appendChild(status);
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var picked = form.querySelector('input[name="category"]:checked');
+      var rating = form.querySelector('input[name="rating"]:checked');
+      var message = textarea.value.trim();
+      if (!picked) { setStatus(status, "Pick what this is about first.", "error"); return; }
+      if (!message) { setStatus(status, "Add a sentence or two so we know what happened.", "error"); textarea.focus(); return; }
+
+      submit.disabled = true;
+      submit.textContent = "Sending…";
+      apiJson("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: picked.value,
+          feature: select.value,
+          page: window.location.pathname,
+          rating: rating ? Number(rating.value) : null,
+          message: message
+        })
+      }).then(function (r) {
+        if (r.ok) { renderFeedbackThanks(body); return; }
+        submit.disabled = false;
+        submit.textContent = "Send feedback";
+        var messages = {
+          not_signed_in: "You've been signed out. Sign in again, then resend.",
+          too_many: "You've sent a lot of feedback in the last hour — thank you! Please try again a bit later.",
+          message_too_long: "That's a little long — please keep it under 2,000 characters."
+        };
+        setStatus(status, messages[r.body.error] || "That didn't send. Please try again.", "error");
+      }).catch(function () {
+        submit.disabled = false;
+        submit.textContent = "Send feedback";
+        setStatus(status, "That didn't send — check your connection and try again.", "error");
+      });
+    });
+
+    body.appendChild(form);
+  }
+
+  function renderFeedbackThanks(body) {
+    body.innerHTML = "";
+    var wrap = document.createElement("div");
+    wrap.className = "feedback-thanks";
+    wrap.tabIndex = -1;
+    wrap.innerHTML = '<span class="early-thanks-icon" aria-hidden="true">🙌</span>';
+    var h = document.createElement("h3");
+    h.textContent = "Thank you — it's in!";
+    var p = document.createElement("p");
+    p.textContent = "Every note gets read. You can see what you've sent, and its status, in My account.";
+    var again = document.createElement("button");
+    again.type = "button";
+    again.className = "btn btn-secondary btn-small";
+    again.textContent = "Send another";
+    again.addEventListener("click", function () { renderFeedbackForm(body); });
+    var mine = document.createElement("a");
+    mine.className = "btn btn-primary btn-small";
+    mine.href = "account.html#my-feedback";
+    mine.textContent = "My account";
+    var actions = document.createElement("div");
+    actions.className = "feedback-thanks-actions";
+    actions.appendChild(again);
+    actions.appendChild(mine);
+    wrap.appendChild(h);
+    wrap.appendChild(p);
+    wrap.appendChild(actions);
+    body.appendChild(wrap);
+    wrap.focus();
+    track("feedback_sent");
+  }
+
+  function openFeedback() {
+    if (!feedbackDialog) feedbackDialog = buildFeedbackDialog();
+    var body = feedbackDialog.querySelector(".feedback-body");
+    if (account.signedIn) renderFeedbackForm(body); else renderFeedbackSignedOut(body);
+    if (!feedbackDialog.open) feedbackDialog.showModal();
+  }
+
+  function addFeedbackButton() {
+    if (!account.available || (!account.signedIn && !account.configured) || pageKey() === "/admin") return;
+    var fab = document.createElement("button");
+    fab.type = "button";
+    fab.className = "feedback-fab";
+    fab.innerHTML = '<span aria-hidden="true">💬</span> Feedback';
+    fab.addEventListener("click", openFeedback);
+    document.body.appendChild(fab);
+    // Coming back from "Sign in to send feedback" reopens the form
+    if (window.location.hash === "#feedback") {
+      if (window.history.replaceState) window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      openFeedback();
+    }
+  }
+
+  /* ----- Saving your week (try.html) ----- */
+  function serializeWeek() {
+    return JSON.stringify(weekEvents.map(function (ev) {
+      return {
+        title: ev.title, dayIndex: ev.dayIndex, startMinutes: ev.startMinutes,
+        endMinutes: ev.endMinutes, allDay: ev.allDay, category: ev.category, source: ev.source,
+        reality: ev.reality ? { status: ev.reality.status, detail: ev.reality.detail } : null
+      };
+    }));
+  }
+
+  function setWeekSaveStatus(text, kind, linkHref, linkText) {
+    var el = weekSync.statusEl;
+    if (!el) return;
+    el.textContent = text;
+    el.className = "week-save-status" + (kind ? " is-" + kind : "");
+    if (linkHref) {
+      var a = document.createElement("a");
+      a.href = linkHref;
+      a.textContent = linkText;
+      el.appendChild(document.createTextNode(" "));
+      el.appendChild(a);
+    }
+  }
+
+  function loadSavedWeek() {
+    weekSync.statusEl = document.getElementById("weekSaveStatus");
+    if (!account.signedIn) {
+      if (account.configured) setWeekSaveStatus("Your week isn't saved.", "", signInUrl(), "Sign in to save it");
+      return Promise.resolve();
+    }
+    setWeekSaveStatus("Loading your saved week…", "");
+    return apiJson("/api/me/week?start=" + toInputDate(weekStart)).then(function (r) {
+      if (r.ok && Array.isArray(r.body.events)) {
+        weekEvents = [];
+        r.body.events.forEach(function (saved) {
+          var ev = addWeekEvent(saved);
+          ev.reality = saved.reality || null;
+        });
+        realityState.shown = {};
+        realityState.added = {};
+        realityState.dayIndex = defaultRealityDay();
+        replanState.plan = null;
+        weekSync.lastSaved = serializeWeek();
+        weekSync.enabled = true;
+        renderAll();
+        setWeekSaveStatus("✓ Loaded your saved week. Changes save automatically.", "success");
+      } else {
+        weekSync.lastSaved = serializeWeek(); // don't save the untouched sample week
+        weekSync.enabled = true;
+        setWeekSaveStatus("Signed in — changes to your week save automatically.", "success");
+      }
+    }).catch(function () {
+      setWeekSaveStatus("Couldn't load your saved week right now.", "error");
+    });
+  }
+
+  function scheduleWeekSave() {
+    if (!weekSync.enabled) return;
+    clearTimeout(weekSync.timer);
+    weekSync.timer = setTimeout(saveWeek, 1200);
+  }
+
+  function saveWeek(keepalive) {
+    weekSync.timer = null;
+    var data = serializeWeek();
+    if (!weekSync.enabled || data === weekSync.lastSaved) return;
+    setWeekSaveStatus("Saving…", "");
+    apiJson("/api/me/week", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weekStart: toInputDate(weekStart), events: JSON.parse(data) }),
+      keepalive: keepalive === true
+    }).then(function (r) {
+      if (r.ok) {
+        weekSync.lastSaved = data;
+        setWeekSaveStatus("✓ Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), "success");
+      } else if (r.status === 401) {
+        weekSync.enabled = false;
+        setWeekSaveStatus("You've been signed out, so changes aren't saving.", "error", signInUrl(), "Sign in again");
+      } else if (r.status === 429) {
+        setWeekSaveStatus("Saving is paused for a few minutes — lots of changes!", "error");
+      } else {
+        setWeekSaveStatus("Couldn't save that change. It'll retry on your next edit.", "error");
+      }
+    }).catch(function () {
+      setWeekSaveStatus("Couldn't save — check your connection.", "error");
+    });
+  }
+
+  function flushWeekSave() {
+    if (weekSync.timer) { clearTimeout(weekSync.timer); saveWeek(true); }
+  }
+  window.addEventListener("pagehide", flushWeekSave);
+
+  /* ----- Start-up ----- */
+  function initAccounts() {
+    if (window.location.protocol === "file:") return Promise.resolve();
+    handleSignInReturn();
+    return apiJson("/api/auth/me").then(function (r) {
+      if (!r.ok || typeof r.body.signedIn !== "boolean") return; // API not available on this host
+      account.available = true;
+      account.signedIn = r.body.signedIn;
+      account.configured = r.body.signedIn || r.body.configured === true;
+      account.user = r.body.user || null;
+      renderNavAccount();
+      addFeedbackButton();
+      if (weekGrid) return loadSavedWeek();
+    }).catch(function () { /* stays signed out; the site works as before */ });
+  }
+
+  // For account.html / admin.html (their own scripts wait on this)
+  var accountReady = initAccounts();
+  window.TimeWise = {
+    ready: accountReady.then(function () { return account; }),
+    openFeedback: function () { if (account.available) openFeedback(); },
+    signInUrl: signInUrl,
+    signOut: signOut
+  };
+
   // The week grid, Replan, and Plan vs. Reality live on try.html — only start
   // them (and look for real calendar connections) on a page that has them.
   if (weekGrid) {
@@ -2476,7 +2997,8 @@
     resetReplanTime();
     renderAll();
     initGoogle();
-    checkNotion();
+    // Load a signed-in user's saved week first, so a Notion auto-connect lands on top of it
+    accountReady.then(checkNotion);
 
     // Arriving from a link like try.html#replan: the grid above just grew, so
     // jump to the section again now that the page has its final height.

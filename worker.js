@@ -19,6 +19,9 @@
      POST /api/track              → counts (anonymously) which demo features a visitor tried
      GET  /api/waitlist/results   → everything above, for results.html (needs ADMIN_KEY)
 
+     /api/auth/*, /api/me/*, /api/feedback, /api/admin/* → server/accounts.js
+       (Google sign-in, saved weeks, feedback, admin dashboard)
+
    Secrets (set once with `npx wrangler secret put NAME`, never committed):
      NOTION_CLIENT_ID, NOTION_CLIENT_SECRET   — Notion connection
      ADMIN_KEY                                — password for results.html
@@ -29,6 +32,8 @@
    For Notion, nothing is stored on the server: the visitor's token lives only
    in their own browser's cookie, and events are passed straight through.
    ========================================================================== */
+
+import { handleAccountsApi } from "./server/accounts.js";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
@@ -54,6 +59,10 @@ export default {
 };
 
 async function handleApi(request, env, url) {
+  // Accounts, saved weeks, feedback, and admin routes live in server/accounts.js
+  const accountsResponse = await handleAccountsApi(request, env, url);
+  if (accountsResponse) return accountsResponse;
+
   const route = request.method + " " + url.pathname;
   const configured = Boolean(env.NOTION_CLIENT_ID && env.NOTION_CLIENT_SECRET);
 
@@ -268,7 +277,7 @@ const SURVEY = {
 const TRACKED_EVENTS = [
   "visit", "event_added", "calendar_google", "calendar_notion", "calendar_ics",
   "replan_used", "replan_applied", "reflection_viewed", "reflection_step_added",
-  "quiz_completed", "waitlist_joined"
+  "quiz_completed", "waitlist_joined", "feedback_sent"
 ];
 
 let tablesReady = false;

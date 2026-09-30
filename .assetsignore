@@ -8,3 +8,8 @@ package-lock.json
 README.md
 worker.js
 .dev.vars
+server
+migrations
+ACCOUNTS_SETUP.md
+ACCOUNTS_WORKPLAN.md
+tests
