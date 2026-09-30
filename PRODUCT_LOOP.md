@@ -1,5 +1,8 @@
 # TimeWise — Product Improvement Loop
 
+> **Status:** live since 2026-09-30 (migration 0002 applied in the D1 Console, deployed with `wrangler deploy`,
+> checked by the owner). All feedback sent before that date is labeled **Test**.
+
 How TimeWise turns tester feedback into evidence-backed product decisions, and how to use the admin
 dashboard (`/admin.html`) and Claude together to run the loop.
 
