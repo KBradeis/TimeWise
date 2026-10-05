@@ -228,7 +228,10 @@ async function signInAs(page, who, from = '/try.html') {
   check('Problems tab has no sideways scrolling on a phone', swp === 390, swp);
   const sw = await M.page.evaluate(() => document.documentElement.scrollWidth);
   check('Admin page has no sideways scrolling on a phone', sw === 390, sw);
-  await M.page.goto(BASE + '/try.html'); await M.page.click('.feedback-fab'); await M.page.waitForTimeout(200);
+  await M.page.goto(BASE + '/try.html'); await M.page.waitForSelector('.nav-feedback', { state: 'attached' });
+  check('Phone: floating Feedback button is hidden (it would cover content)', !(await M.page.isVisible('.feedback-fab')));
+  await M.page.click('#navToggle'); await M.page.waitForTimeout(250); await M.page.click('.nav-feedback'); await M.page.waitForTimeout(200);
+  check('Phone: Feedback opens from the ☰ menu', await M.page.isVisible('.feedback-dialog'));
   await M.page.screenshot({ path: 'acc-feedback-mobile.png' });
 
   const allErrors = [V, A, B, O, X, M].flatMap((u) => u.page.errors);

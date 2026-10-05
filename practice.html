@@ -21,23 +21,23 @@
   <meta property="og:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+  <meta property="og:image:alt" content="TimeWise — For weeks that don't go as planned." />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Practice — TimeWise" />
   <meta name="twitter:description" content="Try a real TimeWise practice session: ten quick time-management questions with supportive feedback, streaks, and XP." />
   <meta name="twitter:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
-  <meta name="twitter:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+  <meta name="twitter:image:alt" content="TimeWise — For weeks that don't go as planned." />
 
   <!-- Favicon (SVG for modern browsers, .ico fallback for older ones) -->
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <link rel="alternate icon" href="favicon.ico" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 
-  <!-- Friendly rounded font, with solid system-font fallback if offline -->
+  <!-- Schibsted Grotesk (headings), Atkinson Hyperlegible Next (reading), IBM Plex Mono (times); system fallbacks if offline -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=IBM+Plex+Mono:wght@500&family=Schibsted+Grotesk:wght@600;700;800&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -49,7 +49,7 @@
     <div class="container nav-wrap">
       <a href="index.html" class="logo" aria-label="TimeWise home">
         <span class="logo-mark" aria-hidden="true">⏳</span>
-        <span class="logo-text">TimeWise</span>
+        <span class="logo-text">Time<b>Wise</b></span>
       </a>
 
       <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="primaryNav" aria-label="Toggle navigation menu">
@@ -57,10 +57,10 @@
       </button>
 
       <nav class="primary-nav" id="primaryNav">
-        <a href="about.html">The Idea</a>
-        <a href="try.html">Try It</a>
+        <a href="about.html">Why TimeWise</a>
+        <a href="try.html">Try it</a>
         <a href="practice.html" aria-current="page">Practice</a>
-        <a href="index.html#early-access" class="btn btn-primary btn-small">Get Early Access</a>
+        <a href="index.html#early-access" class="btn btn-primary btn-small">Get early access</a>
       </nav>
     </div>
   </header>
@@ -69,13 +69,20 @@
 
     <!-- ============ MOCK APP PREVIEW / DEMO ============ -->
     <section id="demo" class="section demo-section">
-      <div class="container">
-        <p class="eyebrow eyebrow-center">See It In Action</p>
-        <h2 class="section-title section-title-center">Try a real TimeWise practice session</h2>
-        <p class="section-lead section-lead-center">
-          This is a fully working preview of the practice experience — answer a few questions and watch
-          your score, streak, and XP update just like they would in the real app.
-        </p>
+      <div class="container practice-grid">
+        <div class="practice-copy">
+          <h1>Practice the planning part</h1>
+          <p class="section-lead">
+            Ten short questions about real situations: a shift that runs late, three deadlines in one week,
+            a group project that stalls. Each answer gets a short explanation, and you finish with two or
+            three next steps for your own week.
+          </p>
+          <ul class="practice-facts">
+            <li><span class="time">2 min</span> About how long a session takes</li>
+            <li><span class="time">10</span> Questions per session</li>
+            <li><span class="time">0</span> Accounts needed. Progress stays in this browser.</li>
+          </ul>
+        </div>
 
         <div class="phone-mockup" id="appDemo">
           <div class="phone-notch" aria-hidden="true"></div>
@@ -83,26 +90,22 @@
           <!-- HOME SCREEN -->
           <div class="app-screen" id="screenHome" data-screen="home">
             <div class="app-topbar">
-              <span class="app-brand">⏳ TimeWise</span>
-              <span class="app-avatar" aria-hidden="true">🙂</span>
+              <span class="app-brand">TimeWise</span>
             </div>
 
             <p class="home-greeting" id="homeGreeting">Welcome back!</p>
 
             <div class="home-stats">
               <div class="home-stat">
-                <span class="home-stat-emoji">🔥</span>
-                <span class="home-stat-value" id="homeBestStreak">0</span>
+                                <span class="home-stat-value" id="homeBestStreak">0</span>
                 <span class="home-stat-label">Best streak</span>
               </div>
               <div class="home-stat">
-                <span class="home-stat-emoji">⭐</span>
-                <span class="home-stat-value" id="homeTotalXp">0</span>
+                                <span class="home-stat-value" id="homeTotalXp">0</span>
                 <span class="home-stat-label">Total XP</span>
               </div>
               <div class="home-stat">
-                <span class="home-stat-emoji">📈</span>
-                <span class="home-stat-value" id="homeSessions">0</span>
+                                <span class="home-stat-value" id="homeSessions">0</span>
                 <span class="home-stat-label">Sessions done</span>
               </div>
             </div>
@@ -116,8 +119,8 @@
               maxlength="60"
             />
 
-            <button class="btn btn-primary btn-full" id="startPracticeBtn">Start Practice Session</button>
-            <p class="home-hint">10 quick questions • about 2 minutes</p>
+            <button class="btn btn-primary btn-full" id="startPracticeBtn">Start a session</button>
+            <p class="home-hint">10 questions · about 2 minutes</p>
           </div>
 
           <!-- QUIZ SCREEN -->
@@ -127,9 +130,9 @@
             </div>
 
             <div class="quiz-stats-row">
-              <span class="quiz-stat">📊 <span id="quizScore">0</span>/10</span>
-              <span class="quiz-stat">🔥 <span id="quizStreak">0</span></span>
-              <span class="quiz-stat">⭐ <span id="quizXp">0</span> XP</span>
+              <span class="quiz-stat">Score <span id="quizScore">0</span>/10</span>
+              <span class="quiz-stat">Streak <span id="quizStreak">0</span></span>
+              <span class="quiz-stat"><span id="quizXp">0</span> XP</span>
             </div>
 
             <p class="quiz-question-count" id="quizQuestionCount">Question 1 of 10</p>
@@ -139,13 +142,13 @@
 
             <div class="feedback-banner" id="feedbackBanner" hidden aria-live="polite">
               <p class="feedback-text" id="feedbackText"></p>
-              <button class="btn btn-primary btn-full" id="nextQuestionBtn">Next Question</button>
+              <button class="btn btn-primary btn-full" id="nextQuestionBtn">Next question</button>
             </div>
           </div>
 
           <!-- SUMMARY SCREEN -->
           <div class="app-screen" id="screenSummary" data-screen="summary" hidden>
-            <div class="summary-badge" aria-hidden="true">🎉</div>
+            
             <h3 class="summary-title">Session complete!</h3>
 
             <div class="summary-stats">
@@ -174,8 +177,8 @@
             </div>
 
             <div class="summary-actions">
-              <button class="btn btn-secondary btn-full" id="restartPracticeBtn">Practice Again</button>
-              <button class="btn btn-primary btn-full" id="backHomeBtn">Back to Home</button>
+              <button class="btn btn-secondary btn-full" id="restartPracticeBtn">Practice again</button>
+              <button class="btn btn-primary btn-full" id="backHomeBtn">Done</button>
             </div>
           </div>
         </div>
@@ -183,14 +186,10 @@
     </section>
 
     <!-- ============ NEXT STEP ============ -->
-    <section class="section final-cta cta-band">
-      <div class="container final-cta-inner">
-        <h2>Enjoyed the practice?</h2>
-        <p>Join the early-access list to get TimeWise when it launches.</p>
-        <div class="cta-band-buttons">
-          <a href="index.html#early-access" class="btn btn-primary btn-large">Get Early Access</a>
-          <a href="try.html" class="btn btn-on-dark btn-large">Try it with your week</a>
-        </div>
+    <section class="quiet-cta">
+      <div class="container quiet-cta-inner">
+        <p><strong>Now try it on a real week.</strong> Load Maya's sample week or your own and see what TimeWise flags.</p>
+        <a href="try.html" class="btn btn-primary">Try it</a>
       </div>
     </section>
 
@@ -201,21 +200,21 @@
     <div class="container footer-grid">
       <div class="footer-brand">
         <span class="logo-mark" aria-hidden="true">⏳</span>
-        <span class="logo-text">TimeWise</span>
-        <p>A time management skill-practice app concept for college students.</p>
+        <span class="logo-text">Time<b>Wise</b></span>
+        <p>A planning app concept for college students whose weeks don't go as planned.</p>
       </div>
 
       <nav class="footer-nav" aria-label="Footer navigation">
         <a href="index.html">Home</a>
-        <a href="about.html">The Idea</a>
-        <a href="try.html">Try It</a>
+        <a href="about.html">Why TimeWise</a>
+        <a href="try.html">Try it</a>
         <a href="practice.html" aria-current="page">Practice</a>
-        <a href="index.html#early-access">Get Early Access</a>
+        <a href="index.html#early-access">Get early access</a>
         <a href="privacy.html">Privacy</a>
       </nav>
     </div>
     <div class="container footer-bottom">
-      <p>TimeWise is a student project concept — built to explore how reflection and practical planning can go hand in hand. 🌱</p>
+      <p>TimeWise is a student project concept — built to explore how reflection and practical planning can go hand in hand.</p>
     </div>
   </footer>
 

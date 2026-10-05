@@ -21,27 +21,27 @@
   <meta property="og:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+  <meta property="og:image:alt" content="TimeWise — For weeks that don't go as planned." />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Try It — TimeWise" />
   <meta name="twitter:description" content="Try TimeWise with your own week: connect Google Calendar or Notion, replan a day that went sideways, and reflect on what actually happened." />
   <meta name="twitter:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
-  <meta name="twitter:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+  <meta name="twitter:image:alt" content="TimeWise — For weeks that don't go as planned." />
 
   <!-- Favicon (SVG for modern browsers, .ico fallback for older ones) -->
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <link rel="alternate icon" href="favicon.ico" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 
-  <!-- Friendly rounded font, with solid system-font fallback if offline -->
+  <!-- Schibsted Grotesk (headings), Atkinson Hyperlegible Next (reading), IBM Plex Mono (times); system fallbacks if offline -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=IBM+Plex+Mono:wght@500&family=Schibsted+Grotesk:wght@600;700;800&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body class="has-app-tabs">
 
   <!-- ============ HEADER / NAV ============
        Same on every page (index, about, try, practice) — edit all four together. -->
@@ -49,7 +49,7 @@
     <div class="container nav-wrap">
       <a href="index.html" class="logo" aria-label="TimeWise home">
         <span class="logo-mark" aria-hidden="true">⏳</span>
-        <span class="logo-text">TimeWise</span>
+        <span class="logo-text">Time<b>Wise</b></span>
       </a>
 
       <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="primaryNav" aria-label="Toggle navigation menu">
@@ -57,50 +57,90 @@
       </button>
 
       <nav class="primary-nav" id="primaryNav">
-        <a href="about.html">The Idea</a>
-        <a href="try.html" aria-current="page">Try It</a>
+        <a href="about.html">Why TimeWise</a>
+        <a href="try.html" aria-current="page">Try it</a>
         <a href="practice.html">Practice</a>
-        <a href="index.html#early-access" class="btn btn-primary btn-small">Get Early Access</a>
+        <a href="index.html#early-access" class="btn btn-primary btn-small">Get early access</a>
       </nav>
     </div>
   </header>
 
   <main id="top">
 
-    <!-- ============ PAGE INTRO ============ -->
-    <section class="page-hero">
+    <!-- ============ APP TABS ============
+         Desktop: a strip under the header. Phones: a bottom tab bar.
+         Each tab jumps to its section; script.js (section 18) keeps the active tab in sync while scrolling. -->
+    <nav class="app-tabs" id="appTabs" aria-label="TimeWise sections">
+      <div class="container app-tabs-inner">
+        <a href="#today" aria-current="true"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2" stroke-linecap="round"/></svg>Today</a>
+        <a href="#calendars"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v4M13 2v4"/></svg>Week</a>
+        <a href="#replan"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h10l-3-3M16 13H6l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>Replan</a>
+        <a href="#reality"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 15V9M10 15V5M16 15v-4" stroke-linecap="round"/></svg>Look back</a>
+      </div>
+    </nav>
+
+    <!-- ============ TODAY ============
+         Built by script.js (section 18) from the same week as the grid below:
+         what's next, how much time is left, and anything that needs attention. -->
+    <section id="today" class="today-section">
       <div class="container">
-        <p class="eyebrow">Try It</p>
-        <h1>Your week, <span class="text-gradient">in one calm view.</span></h1>
-        <p class="page-hero-lead">Load your schedule, replan when things change, and reflect on how it went. It starts with Maya's sample week — swap in your own anytime. Nothing is saved when you leave the page.</p>
-        <nav class="page-jumps" aria-label="On this page">
-          <a href="#calendars"><span>1</span> Your week</a>
-          <a href="#replan"><span>2</span> Replan</a>
-          <a href="#reality"><span>3</span> Reflect</a>
-        </nav>
+        <div class="today-head">
+          <div class="today-head-text">
+            <h1 id="todayTitle">Today</h1>
+            <p class="today-sub" id="todaySub"></p>
+          </div>
+          <div class="today-actions">
+            <a href="#calendars" class="btn btn-secondary" id="todayAddBtn">+ Add</a>
+            <a href="#replan" class="btn btn-primary" id="todayBehindBtn">I'm running behind</a>
+          </div>
+        </div>
+        <p class="today-sample-note" id="todaySampleNote" hidden>
+          This is Maya's sample week, so you can see how it works.
+          <a href="#calendars" id="todaySampleAdd">Add your own week</a>
+        </p>
+
+        <div class="today-grid">
+          <section class="today-panel" aria-labelledby="todayListTitle">
+            <div class="today-panel-head">
+              <h2 id="todayListTitle">Today</h2>
+              <span id="todayLeft"></span>
+            </div>
+            <ol class="today-list" id="todayList"></ol>
+          </section>
+
+          <aside class="today-margin" aria-label="Today at a glance">
+            <div class="today-glance" id="todayGlance"></div>
+            <section class="today-block" aria-labelledby="headsUpTitle">
+              <h2 class="today-label" id="headsUpTitle">Heads up</h2>
+              <div id="todayHeadsUp"></div>
+            </section>
+            <section class="today-block" aria-labelledby="weekLoadTitle">
+              <h2 class="today-label" id="weekLoadTitle">This week</h2>
+              <div class="week-load" id="weekLoad"></div>
+              <p class="week-load-note" id="weekLoadNote"></p>
+            </section>
+          </aside>
+        </div>
       </div>
     </section>
 
-    <!-- ============ CONNECT YOUR CALENDARS ============ -->
+    <!-- ============ YOUR WEEK ============ -->
     <section id="calendars" class="section calendars">
       <div class="container">
-        <p class="eyebrow eyebrow-center">Step 1 · Your week</p>
-        <h2 class="section-title section-title-center">Connect every part of your schedule</h2>
-        <p class="section-lead section-lead-center">
-          Classes, shifts, club meetings, and deadlines — however your calendar lives today. Add an event,
-          connect a calendar, or upload a calendar file and watch your week take shape.
-        </p>
+        <div class="section-head">
+          <h2 class="section-title">Your week</h2>
+          <p class="section-lead">Classes, shifts, meetings, and deadlines in one place. Type them in, connect a calendar, or upload a calendar file.</p>
+        </div>
 
         <!-- Live "this week" grid — fed by the quick-add form, the .ics upload, and the preview connects -->
         <div class="week-grid-wrap">
           <div class="week-grid-header">
             <div>
-              <h3 class="calendar-panel-heading week-grid-title">Your week</h3>
               <p class="week-grid-note" id="weekGridNote"></p>
               <p class="week-save-status" id="weekSaveStatus" aria-live="polite"></p>
             </div>
             <div class="week-grid-actions">
-              <button type="button" class="week-clear-btn week-copy-btn" id="weekCopyBtn" hidden>↻ Copy last week</button>
+              <button type="button" class="week-clear-btn week-copy-btn" id="weekCopyBtn" hidden>Copy last week</button>
               <button type="button" class="week-clear-btn" id="weekClearBtn">Clear my week</button>
             </div>
           </div>
@@ -113,7 +153,7 @@
             <span class="week-legend-item"><span class="week-legend-dot week-event-timewise"></span>TimeWise suggestion</span>
           </div>
           <details class="color-settings" id="colorSettings">
-            <summary>🎨 Customize colors</summary>
+            <summary>Customize colors</summary>
             <div class="color-settings-grid" id="colorSettingsGrid"></div>
             <p class="color-settings-note">
               Saved in this browser.
@@ -122,101 +162,82 @@
           </details>
         </div>
 
-        <div class="calendar-connect-panel">
-          <h3 class="calendar-panel-heading">Add an event</h3>
-          <p class="calendar-panel-sub">
-            Type in a class, shift, or deadline — it drops straight into the grid above.
-          </p>
-          <form class="quick-add-form" id="quickAddForm">
-            <div class="quick-add-row">
-              <label class="quick-add-field quick-add-field-title">
-                <span>Title</span>
-                <input type="text" id="quickAddTitle" placeholder="e.g. BUS 131A Lecture" maxlength="60" required />
-              </label>
-              <label class="quick-add-field quick-add-field-category">
-                <span>Type</span>
-                <select id="quickAddCategory">
-                  <option value="class">Class</option>
-                  <option value="assignment">Assignment</option>
-                  <option value="personal">Personal</option>
-                  <option value="work">Work</option>
-                </select>
-              </label>
-            </div>
-            <div class="quick-add-row">
-              <label class="quick-add-field">
-                <span>Date</span>
-                <input type="date" id="quickAddDate" required />
-              </label>
-              <label class="quick-add-field">
-                <span>Start time</span>
-                <input type="time" id="quickAddStart" required />
-              </label>
-              <label class="quick-add-field">
-                <span>End time <small>(optional)</small></span>
-                <input type="time" id="quickAddEnd" />
-              </label>
-            </div>
-            <button type="submit" class="btn btn-primary quick-add-submit">+ Add to my week</button>
-          </form>
-          <p class="ics-status" id="quickAddStatus" aria-live="polite"></p>
-
-          <div class="calendar-divider"><span>or</span></div>
-
-          <h3 class="calendar-panel-heading">Connect your calendars</h3>
-          <p class="calendar-panel-sub">
-            Read-only: TimeWise just reads this week's events to show them here, and never changes anything
-            in your account.
-          </p>
-          <div class="calendar-providers">
-            <button type="button" class="provider-btn" data-provider="google" data-label="Google Calendar">
-              <span class="provider-icon">🗓️</span> Connect Google Calendar
-            </button>
-            <button type="button" class="provider-btn" data-provider="notion" data-label="Notion">
-              <span class="provider-icon">📝</span> Connect Notion
-            </button>
+        <div class="add-panel">
+          <div class="add-col">
+            <h3 class="calendar-panel-heading" id="quickAddHeading">Add something</h3>
+            <form class="quick-add-form" id="quickAddForm" aria-labelledby="quickAddHeading">
+              <div class="quick-add-row">
+                <label class="quick-add-field quick-add-field-title">
+                  <span>What</span>
+                  <input type="text" id="quickAddTitle" placeholder="e.g. BUS 131A Lecture" maxlength="60" required />
+                </label>
+                <label class="quick-add-field quick-add-field-category">
+                  <span>Type</span>
+                  <select id="quickAddCategory">
+                    <option value="class">Class</option>
+                    <option value="assignment">Assignment</option>
+                    <option value="personal">Personal</option>
+                    <option value="work">Work</option>
+                  </select>
+                </label>
+              </div>
+              <div class="quick-add-row">
+                <label class="quick-add-field">
+                  <span>Day</span>
+                  <input type="date" id="quickAddDate" required />
+                </label>
+                <label class="quick-add-field">
+                  <span>Starts</span>
+                  <input type="time" id="quickAddStart" required />
+                </label>
+                <label class="quick-add-field">
+                  <span>Ends <small>(optional)</small></span>
+                  <input type="time" id="quickAddEnd" />
+                </label>
+              </div>
+              <button type="submit" class="btn btn-primary quick-add-submit">Add to my week</button>
+            </form>
+            <p class="ics-status" id="quickAddStatus" aria-live="polite"></p>
           </div>
-          <p class="provider-status-note" id="providerStatusNote" aria-live="polite"></p>
-          <p class="calendar-panel-sub provider-unverified-note">
-            Heads up: TimeWise is a student project, so Google shows a <em>"Google hasn't verified this app"</em>
-            screen. Click <strong>Advanced → Go to TimeWise</strong> to continue. It only asks to <em>see</em> your
-            calendar. Rather not? Use the calendar file upload below instead.
-          </p>
 
-          <div class="calendar-divider"><span>or</span></div>
+          <div class="add-col add-col-import">
+            <h3 class="calendar-panel-heading">Bring in your calendar</h3>
+            <p class="calendar-panel-sub">Read-only. TimeWise only reads this week and never changes anything in your accounts.</p>
+            <div class="calendar-providers">
+              <button type="button" class="provider-btn" data-provider="google" data-label="Google Calendar">Connect Google Calendar</button>
+              <button type="button" class="provider-btn" data-provider="notion" data-label="Notion">Connect Notion</button>
+            </div>
+            <p class="provider-status-note" id="providerStatusNote" aria-live="polite"></p>
+            <p class="calendar-panel-sub provider-unverified-note">
+              TimeWise is a student project, so Google shows a <em>"Google hasn't verified this app"</em> screen.
+              Click <strong>Advanced → Go to TimeWise</strong> to continue, or upload a calendar file instead.
+            </p>
 
-          <h3 class="calendar-panel-heading">Upload a calendar file</h3>
-          <p class="calendar-panel-sub">
-            This one's real: works with Apple Calendar, Samsung Calendar, Outlook, Moodle, or anything that
-            exports a standard <strong>.ics</strong> file. It's read entirely in your browser and never
-            leaves your device.
-          </p>
-          <label for="icsFileInput" class="ics-upload-area">
-            <span class="ics-upload-icon" aria-hidden="true">📅</span>
-            <span class="ics-upload-text">
-              <strong>Choose a .ics calendar file</strong>
-              <small>Exported from Apple Calendar, Samsung Calendar, Outlook, Google Calendar, Moodle, and more</small>
-            </span>
-            <input type="file" id="icsFileInput" accept=".ics,text/calendar" />
-          </label>
-          <p class="ics-status" id="icsStatus" aria-live="polite"></p>
-          <details class="ics-help">
-            <summary>How do I get a .ics file from Google Calendar?</summary>
-            <ol>
-              <li>On a computer, open <strong>calendar.google.com</strong> → ⚙️ <strong>Settings</strong>.</li>
-              <li>Choose <strong>Import &amp; export</strong> → <strong>Export</strong>. A .zip file downloads.</li>
-              <li>Open the .zip. Each calendar is its own .ics file (your main one is named after your email).</li>
-              <li>Upload that file above. To refresh later, export and upload again.</li>
-            </ol>
-          </details>
+            <label for="icsFileInput" class="ics-upload-area">
+              <span class="ics-upload-text">
+                <strong>Upload a calendar file (.ics)</strong>
+                <small>From Apple Calendar, Outlook, Google Calendar, Moodle, and others. Read in your browser only.</small>
+              </span>
+              <input type="file" id="icsFileInput" accept=".ics,text/calendar" />
+            </label>
+            <p class="ics-status" id="icsStatus" aria-live="polite"></p>
+            <details class="ics-help">
+              <summary>How do I get a .ics file from Google Calendar?</summary>
+              <ol>
+                <li>On a computer, open <strong>calendar.google.com</strong> → <strong>Settings</strong>.</li>
+                <li>Choose <strong>Import &amp; export</strong> → <strong>Export</strong>. A .zip file downloads.</li>
+                <li>Open the .zip. Each calendar is its own .ics file (your main one is named after your email).</li>
+                <li>Upload that file here. To refresh later, export and upload again.</li>
+              </ol>
+            </details>
+          </div>
         </div>
 
         <p class="calendar-disclaimer">
-          Google Calendar and Notion connections are read-only and only fetch this week. Google events go
-          straight from Google to your browser; Notion items pass through this site's small server on their
-          way to you, and nothing is stored there. Your Notion sign-in is kept in a secure cookie in your
-          browser for 7 days. Everything on the grid disappears when you leave the page.
+          Google events go straight from Google to your browser. Notion items pass through this site's server
+          without being stored. More in <a href="privacy.html">Privacy</a>.
         </p>
+
       </div>
     </section>
 
@@ -225,13 +246,10 @@
          (section 15) reshuffles the rest of a day around fixed commitments. -->
     <section id="replan" class="section replan">
       <div class="container">
-        <p class="eyebrow eyebrow-center">Step 2 · Replan</p>
-        <h2 class="section-title section-title-center">Replan the rest of your day in seconds</h2>
-        <p class="section-lead section-lead-center">
-          Running late? Something new came up? Tell TimeWise what changed. It keeps your fixed commitments
-          where they are, reshuffles everything else, and moves what won't fit to tomorrow, so the rest of
-          your day is still realistic.
-        </p>
+        <div class="section-head">
+          <h2 class="section-title">Running behind?</h2>
+          <p class="section-lead">Tell TimeWise what changed. Fixed things (classes, shifts) stay put, everything else shifts, and whatever won't fit moves to tomorrow.</p>
+        </div>
 
         <div class="reality-panel replan-panel">
           <div class="replan-body">
@@ -289,7 +307,7 @@
               </div>
 
               <h4 class="replan-subheading">What's left today</h4>
-              <p class="calendar-panel-sub">Tap a block to switch it between <strong>📌 fixed time</strong> and <strong>↔ can move</strong>.</p>
+              <p class="calendar-panel-sub">Tap a block to switch it between <strong>fixed</strong> and <strong>can move</strong>.</p>
               <ul class="replan-blocks" id="replanBlocks"></ul>
 
               <button type="submit" class="btn btn-primary btn-full" id="replanBtn">Replan the rest of my day</button>
@@ -307,12 +325,10 @@
          into one insight + one next step that can be added to the next day. -->
     <section id="reality" class="section reality">
       <div class="container">
-        <p class="eyebrow eyebrow-center">Step 3 · Reflect</p>
-        <h2 class="section-title section-title-center">See where your day actually went</h2>
-        <p class="section-lead section-lead-center">
-          Pick a day, mark what really happened to each block, and TimeWise turns it into one honest
-          insight and one realistic next step — then drops that step straight into tomorrow.
-        </p>
+        <div class="section-head">
+          <h2 class="section-title">Look back on a day</h2>
+          <p class="section-lead">Mark what actually happened. You'll get one pattern worth knowing and one small change for tomorrow, without the guilt trip.</p>
+        </div>
 
         <div class="reality-panel">
           <div class="reality-day-tabs" id="realityDayTabs" role="group" aria-label="Choose a day to reflect on"></div>
@@ -334,21 +350,16 @@
         </div>
 
         <p class="calendar-disclaimer">
-          Reflections come from simple, transparent rules in this page — no AI service, no account,
-          and nothing leaves your browser.
+          Reflections come from simple rules in this page. No AI service is involved.
         </p>
       </div>
     </section>
 
     <!-- ============ NEXT STEP ============ -->
-    <section class="section final-cta cta-band">
-      <div class="container final-cta-inner">
-        <h2>Want the real thing?</h2>
-        <p>Join the early-access list — it takes 20 seconds and shapes what gets built first.</p>
-        <div class="cta-band-buttons">
-          <a href="index.html#early-access" class="btn btn-primary btn-large">Get Early Access</a>
-          <a href="practice.html" class="btn btn-on-dark btn-large">Try a practice session</a>
-        </div>
+    <section class="quiet-cta">
+      <div class="container quiet-cta-inner">
+        <p><strong>Want TimeWise when it launches?</strong> It takes 20 seconds and helps decide what gets built first.</p>
+        <a href="index.html#early-access" class="btn btn-secondary">Get early access</a>
       </div>
     </section>
 
@@ -359,21 +370,21 @@
     <div class="container footer-grid">
       <div class="footer-brand">
         <span class="logo-mark" aria-hidden="true">⏳</span>
-        <span class="logo-text">TimeWise</span>
-        <p>A time management skill-practice app concept for college students.</p>
+        <span class="logo-text">Time<b>Wise</b></span>
+        <p>A planning app concept for college students whose weeks don't go as planned.</p>
       </div>
 
       <nav class="footer-nav" aria-label="Footer navigation">
         <a href="index.html">Home</a>
-        <a href="about.html">The Idea</a>
-        <a href="try.html" aria-current="page">Try It</a>
+        <a href="about.html">Why TimeWise</a>
+        <a href="try.html" aria-current="page">Try it</a>
         <a href="practice.html">Practice</a>
-        <a href="index.html#early-access">Get Early Access</a>
+        <a href="index.html#early-access">Get early access</a>
         <a href="privacy.html">Privacy</a>
       </nav>
     </div>
     <div class="container footer-bottom">
-      <p>TimeWise is a student project concept — built to explore how reflection and practical planning can go hand in hand. 🌱</p>
+      <p>TimeWise is a student project concept — built to explore how reflection and practical planning can go hand in hand.</p>
     </div>
   </footer>
 

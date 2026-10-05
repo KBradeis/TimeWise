@@ -574,8 +574,10 @@
     [2, "BUS 131A Lecture", 570, 650, "class"],
     [2, "Econ problem set", 660, 750, "assignment"],
     [2, "Shift at Campus Café", 840, 1020, "work"],
+    [2, "Group project work session", 1050, 1170, "assignment"],
     [2, "Essay draft", 1200, 1320, "assignment"],
     [3, "BIO 201 Lecture", 600, 675, "class"],
+    [3, "Office hours: Calc II", 1050, 1110, "class"],
     [3, "Study group: Calc II", 1080, 1200, "assignment"],
     [3, "Econ problem set due", 1439, null, "assignment"],
     [4, "BUS 131A Lecture", 570, 650, "class"],
@@ -642,6 +644,7 @@
   function renderWeekGrid() {
     if (!weekGrid) return;
     weekGrid.innerHTML = "";
+    var overlapping = findConflicts().ids;
 
     for (var i = 0; i < 7; i++) {
       var col = document.createElement("div");
@@ -674,7 +677,17 @@
         empty.textContent = "Free";
         list.appendChild(empty);
       }
-      dayEvents.forEach(function (ev) { list.appendChild(buildWeekEventChip(ev)); });
+      dayEvents.forEach(function (ev) {
+        var chip = buildWeekEventChip(ev);
+        if (overlapping[ev.id]) {
+          chip.classList.add("is-conflict");
+          var warn = document.createElement("span");
+          warn.className = "week-event-conflict";
+          warn.textContent = "Overlaps";
+          chip.appendChild(warn);
+        }
+        list.appendChild(chip);
+      });
       col.appendChild(list);
 
       weekGrid.appendChild(col);
@@ -682,6 +695,7 @@
 
     if (weekClearBtn) weekClearBtn.textContent = weekEvents.length ? "Clear my week" : "Load Maya's sample week";
     scheduleWeekSave(); // no-op unless signed in on try.html
+    renderToday();
     if (weekGridNote) {
       var hasSample = weekEvents.some(function (ev) { return ev.source === "sample"; });
       weekGridNote.textContent = hasSample
@@ -701,7 +715,7 @@
 
   /* ----- Customize colors (saved in this browser only) ----- */
   var COLOR_KEY = "timewise-category-colors";
-  var DEFAULT_COLORS = { class: "#6c5ce7", assignment: "#fb923c", personal: "#4f8ef7", work: "#0d9488", timewise: "#22c55e" };
+  var DEFAULT_COLORS = { class: "#6272d9", assignment: "#df8a4e", personal: "#4b9cc8", work: "#2a9d8f", timewise: "#5aa86b" };
   var COLOR_LABELS = { class: "Class", assignment: "Assignment", personal: "Personal", work: "Work", timewise: "TimeWise suggestion" };
   var colorSettingsGrid = document.getElementById("colorSettingsGrid");
   var colorResetBtn = document.getElementById("colorResetBtn");
@@ -1908,7 +1922,7 @@
       var placeholder = document.createElement("div");
       placeholder.className = "reality-placeholder";
       placeholder.innerHTML =
-        '<span class="reality-placeholder-icon" aria-hidden="true">🔍</span>' +
+        
         "<h4>Your reflection shows up here</h4>" +
         "<p>Mark what happened to each block, then tap <strong>See my reflection</strong>. " +
         "You'll get one honest insight and one realistic next step — no guilt trip.</p>";
@@ -1965,7 +1979,7 @@
     // Insight
     var insight = document.createElement("div");
     insight.className = "reality-card reality-insight";
-    insight.innerHTML = '<span class="pill pill-purple">🔍 What happened</span>';
+    insight.innerHTML = '<span class="pill pill-purple">What happened</span>';
     var h4 = document.createElement("h4");
     h4.textContent = reflection.title;
     var p = document.createElement("p");
@@ -1977,7 +1991,7 @@
     // Next step
     var next = document.createElement("div");
     next.className = "reality-card reality-next";
-    next.innerHTML = '<span class="pill pill-green">➡️ Your next step</span>';
+    next.innerHTML = '<span class="pill pill-green">Your next step</span>';
     var stepP = document.createElement("p");
     appendParts(stepP, reflection.step);
     next.appendChild(stepP);
@@ -2235,7 +2249,7 @@
       text.appendChild(time);
       var tag = document.createElement("span");
       tag.className = "replan-block-tag";
-      tag.textContent = fixed ? "📌 Fixed" : "↔ Can move";
+      tag.textContent = fixed ? "Fixed" : "Can move";
       btn.appendChild(dot);
       btn.appendChild(text);
       btn.appendChild(tag);
@@ -2260,7 +2274,7 @@
       var placeholder = document.createElement("div");
       placeholder.className = "reality-placeholder";
       placeholder.innerHTML =
-        '<span class="reality-placeholder-icon" aria-hidden="true">🔀</span>' +
+        
         "<h4>Your new plan shows up here</h4>" +
         "<p>Tell TimeWise what changed and tap <strong>Replan the rest of my day</strong>. You'll see what stays, " +
         "what moves, and what can wait until tomorrow.</p>";
@@ -2271,7 +2285,7 @@
     // Summary sentence
     var summary = document.createElement("div");
     summary.className = "reality-card replan-summary";
-    summary.innerHTML = '<span class="pill pill-purple">🔀 New plan from ' + formatMinutes(plan.start) + "</span>";
+    summary.innerHTML = '<span class="pill pill-purple">New plan from ' + formatMinutes(plan.start) + "</span>";
     var p = document.createElement("p");
     var bits = [];
     if (plan.counts.fixed) bits.push("kept " + plural(plan.counts.fixed, "fixed commitment") + " in place");
@@ -2294,7 +2308,7 @@
     // Before → after list
     var list = document.createElement("ol");
     list.className = "replan-rows";
-    var LABELS = { fixed: "📌 Stays", same: "✓ Same time", moved: "↪ Moved", new: "✚ Added", deferred: "⏭ Tomorrow" };
+    var LABELS = { fixed: "Stays", same: "Same time", moved: "Moved", new: "Added", deferred: "Tomorrow" };
     plan.rows.forEach(function (row) {
       var li = document.createElement("li");
       li.className = "replan-row is-" + row.kind;
@@ -2648,7 +2662,7 @@
       button.className = "nav-account-btn";
       button.setAttribute("aria-expanded", "false");
       button.setAttribute("aria-controls", "navAccountMenu");
-      button.textContent = "👤 " + first + " ▾";
+      button.textContent = first + " ▾";
 
       var menu = document.createElement("div");
       menu.className = "nav-account-menu";
@@ -2896,7 +2910,7 @@
     var wrap = document.createElement("div");
     wrap.className = "feedback-thanks";
     wrap.tabIndex = -1;
-    wrap.innerHTML = '<span class="early-thanks-icon" aria-hidden="true">🙌</span>';
+
     var h = document.createElement("h3");
     h.textContent = "Thank you — it's in!";
     var p = document.createElement("p");
@@ -2934,9 +2948,21 @@
     var fab = document.createElement("button");
     fab.type = "button";
     fab.className = "feedback-fab";
-    fab.innerHTML = '<span aria-hidden="true">💬</span> Feedback';
+    fab.textContent = "Feedback";
     fab.addEventListener("click", openFeedback);
     document.body.appendChild(fab);
+    // On phones and tablets the floating button would cover content, so the
+    // same action lives in the ☰ menu instead (CSS decides which one shows).
+    var nav = document.getElementById("primaryNav");
+    if (nav) {
+      var navFb = document.createElement("button");
+      navFb.type = "button";
+      navFb.className = "nav-feedback";
+      navFb.textContent = "Send feedback";
+      navFb.addEventListener("click", openFeedback);
+      var cta = nav.querySelector(".btn");
+      nav.insertBefore(navFb, cta || null);
+    }
     // Coming back from "Sign in to send feedback" reopens the form
     if (window.location.hash === "#feedback") {
       if (window.history.replaceState) window.history.replaceState(null, "", window.location.pathname + window.location.search);
@@ -3140,6 +3166,479 @@
     signInUrl: signInUrl,
     signOut: signOut
   };
+
+
+  /* ---------- 18. Today ----------
+     The first thing on try.html. Answers three questions from the same week
+     as the grid: what's next, how much time is left today, and what needs
+     attention (overlaps, packed days, blocks that didn't happen). Everything
+     is computed in the browser from weekEvents; nothing here invents data. */
+  var todayEls = {
+    title: document.getElementById("todayTitle"),
+    sub: document.getElementById("todaySub"),
+    sample: document.getElementById("todaySampleNote"),
+    list: document.getElementById("todayList"),
+    left: document.getElementById("todayLeft"),
+    glance: document.getElementById("todayGlance"),
+    headsUp: document.getElementById("todayHeadsUp"),
+    load: document.getElementById("weekLoad"),
+    loadNote: document.getElementById("weekLoadNote")
+  };
+  // Missed blocks the student already put back or let go, remembered in this
+  // browser so the offer doesn't come back after a reload.
+  var HANDLED_KEY = "timewise-handled-missed";
+  var todayState = { handled: {} };
+  try { todayState.handled = JSON.parse(window.localStorage.getItem(HANDLED_KEY) || "{}") || {}; } catch (e) { todayState.handled = {}; }
+  function missedKey(ev) { return toInputDate(weekStart) + "|" + ev.dayIndex + "|" + ev.startMinutes + "|" + ev.title; }
+  function markHandled(ev) {
+    todayState.handled[missedKey(ev)] = 1;
+    try { window.localStorage.setItem(HANDLED_KEY, JSON.stringify(todayState.handled)); } catch (e) { /* this visit only */ }
+  }
+  var DAY_END = 23 * 60;           // "free before 11 PM"
+  var PACKED_MINUTES = 9 * 60;      // a day with 9+ planned hours gets a heads-up
+
+  function nowMinutes() {
+    var d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+
+  function isDeadline(ev) {
+    return !ev.allDay && ev.endMinutes == null && /\bdue\b/i.test(ev.title);
+  }
+
+  function plannedMinutes(ev) {
+    return ev.allDay || isDeadline(ev) ? 0 : eventDuration(ev);
+  }
+
+  function formatSpan(mins) {
+    var h = Math.floor(mins / 60), m = mins % 60;
+    if (!h) return m + " min";
+    if (!m) return h + (h === 1 ? " hour" : " hours");
+    if (m === 30) return h + "½ hours";
+    return h + "h " + m + "m";
+  }
+
+  function shortTime(total) {
+    var h = Math.floor(total / 60) % 24, m = total % 60;
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ":" + (m < 10 ? "0" : "") + m;
+  }
+
+  // Timed blocks that overlap another block on the same day
+  function findConflicts() {
+    var ids = {}, pairs = [];
+    for (var d = 0; d < 7; d++) {
+      var timed = eventsForDay(d).filter(function (ev) { return plannedMinutes(ev) > 0; });
+      for (var i = 0; i < timed.length; i++) {
+        for (var j = i + 1; j < timed.length; j++) {
+          var a = timed[i], b = timed[j];
+          var overlap = Math.min(eventEnd(a), eventEnd(b)) - Math.max(a.startMinutes, b.startMinutes);
+          if (overlap > 0) {
+            ids[a.id] = ids[b.id] = true;
+            pairs.push({ day: d, a: a, b: b, minutes: overlap });
+          }
+        }
+      }
+    }
+    return { ids: ids, pairs: pairs };
+  }
+
+  function dayPlanned(d) {
+    return eventsForDay(d).reduce(function (sum, ev) { return sum + plannedMinutes(ev); }, 0);
+  }
+
+  // Free minutes between `from` and DAY_END on a day, skipping planned blocks
+  function freeMinutes(d, from) {
+    var cursor = from, free = 0;
+    eventsForDay(d).filter(function (ev) { return plannedMinutes(ev) > 0; }).forEach(function (ev) {
+      var s = ev.startMinutes, e = eventEnd(ev);
+      if (e <= cursor) return;
+      if (s > cursor) free += Math.min(s, DAY_END) - cursor;
+      cursor = Math.max(cursor, e);
+    });
+    if (cursor < DAY_END) free += DAY_END - cursor;
+    return Math.max(0, free);
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function nextUpcomingDeadline() {
+    for (var d = todayIndex; d < 7; d++) {
+      var due = eventsForDay(d).filter(isDeadline)[0];
+      if (due) return { day: d, ev: due };
+    }
+    return null;
+  }
+
+  function renderToday() {
+    if (!todayEls || !todayEls.list) return;
+    var now = nowMinutes();
+    var today = dateForDay(todayIndex);
+    todayEls.title.textContent = today.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+    todayEls.sub.textContent = "Week of " + weekRangeLabel();
+    todayEls.sample.hidden = !weekEvents.some(function (ev) { return ev.source === "sample"; });
+
+    renderTodayList(now);
+    renderTodayGlance(now);
+    renderHeadsUp(now);
+    renderWeekLoad();
+  }
+
+  function renderTodayList(now) {
+    var list = todayEls.list;
+    list.innerHTML = "";
+    var events = eventsForDay(todayIndex);
+    var timed = events.filter(function (ev) { return !ev.allDay; });
+
+    if (!weekEvents.length) {
+      todayEls.left.textContent = "";
+      var empty = el("li", "today-empty");
+      empty.appendChild(el("p", "today-empty-title", "Your week is empty."));
+      empty.appendChild(el("p", null, "Add your classes and shifts, or bring in a calendar. TimeWise works from whatever you add."));
+      var row = el("div", "today-empty-actions");
+      var add = el("a", "btn btn-primary btn-small", "Add something");
+      add.href = "#calendars";
+      add.addEventListener("click", focusQuickAdd);
+      var sample = el("button", "btn btn-secondary btn-small", "Show Maya's sample week");
+      sample.type = "button";
+      sample.addEventListener("click", function () { if (weekClearBtn) weekClearBtn.click(); });
+      row.appendChild(add);
+      row.appendChild(sample);
+      empty.appendChild(row);
+      list.appendChild(empty);
+      return;
+    }
+
+    events.filter(function (ev) { return ev.allDay; }).forEach(function (ev) {
+      list.appendChild(todayRow(ev, "allday", now));
+    });
+
+    if (!timed.length) {
+      todayEls.left.textContent = "";
+      var none = el("li", "today-empty");
+      none.appendChild(el("p", "today-empty-title", "Nothing planned today."));
+      for (var d = todayIndex + 1; d < 7; d++) {
+        var first = eventsForDay(d).filter(function (ev) { return !ev.allDay; })[0];
+        if (first) {
+          none.appendChild(el("p", null, "Next up: " + first.title + ", " + DAY_NAMES[d] + " at " + formatMinutes(first.startMinutes) + "."));
+          break;
+        }
+      }
+      list.appendChild(none);
+      return;
+    }
+
+    var remaining = timed.filter(function (ev) { return eventEnd(ev) > now && !isDeadline(ev) || isDeadline(ev) && ev.startMinutes > now; });
+    todayEls.left.textContent = remaining.length ? remaining.length + (remaining.length === 1 ? " thing left" : " things left") : "All done for today";
+
+    // The one block that gets the coral treatment: happening now, or the next one
+    var focus = timed.filter(function (ev) { return !isDeadline(ev) && ev.startMinutes <= now && eventEnd(ev) > now; })[0] ||
+                timed.filter(function (ev) { return ev.startMinutes > now; })[0] || null;
+    var nowDrawn = false, hintUsed = false, cursor = null;
+    var deadline = nextUpcomingDeadline();
+
+    timed.forEach(function (ev) {
+      var start = ev.startMinutes;
+      // free time worth mentioning (an hour or more, still ahead of us)
+      if (cursor != null) {
+        var gapStart = Math.max(cursor, now);
+        if (start - gapStart >= 60) {
+          list.appendChild(freeRow(gapStart, start - gapStart, !hintUsed && deadline));
+          hintUsed = true;
+        }
+      }
+      if (!nowDrawn && start > now) { list.appendChild(nowRow(now)); nowDrawn = true; }
+      var state = ev === focus ? (start <= now ? "now" : "next") : (eventEnd(ev) <= now && !isDeadline(ev) ? "past" : "later");
+      list.appendChild(todayRow(ev, state, now));
+      cursor = Math.max(cursor == null ? 0 : cursor, isDeadline(ev) ? start : eventEnd(ev));
+    });
+    if (!nowDrawn && now < DAY_END) list.appendChild(nowRow(now));
+    var tail = Math.max(cursor, now);
+    if (DAY_END - tail >= 90) list.appendChild(freeRow(tail, DAY_END - tail, !hintUsed && deadline));
+  }
+
+  function nowRow(now) {
+    var li = el("li", "today-now");
+    li.setAttribute("aria-label", "Now, " + formatMinutes(now));
+    li.appendChild(el("span", "today-now-time", shortTime(now)));
+    return li;
+  }
+
+  function freeRow(start, mins, deadline) {
+    var li = el("li", "today-free");
+    li.appendChild(el("span", "today-time", shortTime(start)));
+    var text = formatSpan(mins) + " free";
+    if (deadline) text += ". Good time to get ahead on " + deadline.ev.title.replace(/\s+due$/i, "") + ".";
+    li.appendChild(el("span", "today-free-text", text));
+    return li;
+  }
+
+  function todayRow(ev, state, now) {
+    var li = el("li", "today-item is-" + state);
+    li.style.setProperty("--cat", "var(--cat-" + ev.category + ")");
+    var time = el("span", "today-time");
+    if (ev.allDay) time.textContent = "All day";
+    else {
+      time.appendChild(el("b", null, shortTime(ev.startMinutes)));
+      if (ev.endMinutes != null) time.appendChild(document.createTextNode(shortTime(ev.endMinutes)));
+    }
+    li.appendChild(time);
+
+    var body = el("div", "today-body");
+    var title = el("p", "today-title");
+    if (state === "now" || state === "next") title.appendChild(el("span", "today-badge", state === "now" ? "Now" : "Next"));
+    title.appendChild(document.createTextNode(ev.title));
+    body.appendChild(title);
+
+    var meta = [CATEGORY_LABELS[ev.category] || ""];
+    if (state === "next") {
+      var mins = ev.startMinutes - now;
+      meta.push(mins < 60 ? "starts in " + mins + " min" : "starts at " + formatMinutes(ev.startMinutes));
+    } else if (state === "now" && ev.endMinutes != null) {
+      meta.push("until " + formatMinutes(ev.endMinutes));
+    } else if (isDeadline(ev)) {
+      meta.push("due " + formatMinutes(ev.startMinutes));
+    }
+    if (ev.source && SOURCE_TAGS[ev.source] && ev.source !== "timewise") meta.push("from " + SOURCE_TAGS[ev.source]);
+    body.appendChild(el("p", "today-meta", meta.filter(Boolean).join(" · ")));
+    li.appendChild(body);
+
+    // Blocks that already ended: a quick check-in, never a red X
+    if (state === "past") {
+      if (ev.reality) {
+        li.appendChild(el("span", "today-status is-" + ev.reality.status, TODAY_STATUS[ev.reality.status]));
+      } else {
+        var ask = el("div", "today-checkin");
+        ask.setAttribute("role", "group");
+        ask.setAttribute("aria-label", "How did " + ev.title + " go?");
+        [["done", "Done"], ["skipped", "Didn't happen"]].forEach(function (pair) {
+          var b = el("button", "today-check-btn", pair[1]);
+          b.type = "button";
+          b.addEventListener("click", function () {
+            setRealityStatus(ev.id, pair[0]);
+          });
+          ask.appendChild(b);
+        });
+        li.appendChild(ask);
+      }
+    }
+    return li;
+  }
+
+  function renderTodayGlance(now) {
+    var g = todayEls.glance;
+    g.innerHTML = "";
+    var free = freeMinutes(todayIndex, now);
+    var planned = dayPlanned(todayIndex);
+    var a = el("div", "glance-stat");
+    a.appendChild(el("b", null, now >= DAY_END ? "Day's done" : formatSpan(free).replace(" hours", "h").replace(" hour", "h")));
+    a.appendChild(el("small", null, now >= DAY_END ? "get some sleep" : "free before 11 PM"));
+    var b = el("div", "glance-stat");
+    b.appendChild(el("b", null, planned ? formatSpan(planned).replace(" hours", "h").replace(" hour", "h") : "0h"));
+    b.appendChild(el("small", null, "planned today"));
+    g.appendChild(a);
+    g.appendChild(b);
+  }
+
+  function noteCard(kind, parts, actions) {
+    var card = el("div", "headsup is-" + kind);
+    var p = el("p");
+    parts.forEach(function (part) {
+      if (typeof part === "string") p.appendChild(document.createTextNode(part));
+      else p.appendChild(el("strong", null, part.b));
+    });
+    card.appendChild(p);
+    if (actions && actions.length) {
+      var row = el("div", "headsup-actions");
+      actions.forEach(function (act) {
+        var b = el("button", "link-btn", act.label);
+        b.type = "button";
+        b.addEventListener("click", act.run);
+        row.appendChild(b);
+      });
+      card.appendChild(row);
+    }
+    return card;
+  }
+
+  function goTo(id) {
+    var target = document.getElementById(id);
+    if (target) target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+
+  function replanDayAndGo(d) {
+    var sel = document.getElementById("replanDay");
+    if (sel && sel.querySelector('option[value="' + d + '"]')) {
+      sel.value = String(d);
+      sel.dispatchEvent(new Event("change"));
+    }
+    goTo("replan");
+  }
+
+  // Missed blocks this week that haven't been put back or let go yet
+  function missedBlocks() {
+    return weekEvents.filter(function (ev) {
+      return ev.reality && ev.reality.status === "skipped" && ev.dayIndex <= todayIndex && !todayState.handled[missedKey(ev)];
+    });
+  }
+
+  function slotFor(ev) {
+    var len = Math.min(Math.max(plannedMinutes(ev), 30), 120);
+    for (var d = todayIndex; d < 7; d++) {
+      var from = d === todayIndex ? roundUpTo(nowMinutes() + 15, 15) : 9 * 60;
+      var start = findFreeSlot(d, Math.max(from, 9 * 60), 22 * 60, len);
+      if (start != null) return { day: d, start: start, len: len };
+    }
+    return null;
+  }
+
+  function renderHeadsUp(now) {
+    var box = todayEls.headsUp;
+    box.innerHTML = "";
+    var cards = [];
+
+    missedBlocks().slice(0, 2).forEach(function (ev) {
+      var when = ev.dayIndex === todayIndex ? "today" : "on " + DAY_NAMES[ev.dayIndex];
+      var slot = slotFor(ev);
+      var actions = [];
+      if (slot) {
+        var label = (slot.day === todayIndex ? "Today" : DAY_SHORT[slot.day]) + " " + formatMinutes(slot.start);
+        actions.push({ label: "Put it on " + label, run: function () {
+          markHandled(ev);
+          addWeekEvent({ title: ev.title, dayIndex: slot.day, startMinutes: slot.start, endMinutes: slot.start + slot.len, category: ev.category, source: "manual" });
+          track("event_added");
+          renderAll();
+          announce(ev.title + " is back on " + (slot.day === todayIndex ? "today" : DAY_NAMES[slot.day]) + " at " + formatMinutes(slot.start) + ".");
+        } });
+      }
+      actions.push({ label: "Let it go", run: function () { markHandled(ev); renderToday(); } });
+      cards.push(noteCard("missed", [ev.title + " didn't happen " + when + ". That's fine. Want to put it back?"], actions));
+    });
+
+    findConflicts().pairs.filter(function (p) {
+      return p.day > todayIndex || p.day === todayIndex && eventEnd(p.a) > now;
+    }).slice(0, 2).forEach(function (p) {
+      var dayName = p.day === todayIndex ? "Today" : DAY_NAMES[p.day];
+      cards.push(noteCard("conflict", [{ b: dayName + " " + formatMinutes(Math.max(p.a.startMinutes, p.b.startMinutes)) + ":" }, " " + p.b.title + " overlaps " + p.a.title + " by " + formatSpan(p.minutes) + "."],
+        [{ label: "Show me", run: function () { goTo("calendars"); } }]));
+    });
+
+    for (var d = todayIndex; d < 7 && cards.length < 4; d++) {
+      var planned = dayPlanned(d);
+      if (planned >= PACKED_MINUTES) {
+        (function (day, mins) {
+          cards.push(noteCard("packed", [{ b: (day === todayIndex ? "Today" : DAY_NAMES[day]) + " is packed." }, " " + formatSpan(mins) + " planned. Something will probably slip."],
+            [{ label: "Replan " + (day === todayIndex ? "today" : DAY_NAMES[day]), run: function () { replanDayAndGo(day); } }]));
+        })(d, planned);
+      }
+    }
+
+    if (!cards.length) {
+      box.appendChild(el("p", "headsup-clear", weekEvents.length ? "Nothing needs your attention right now." : "Once your week is in, overlaps and packed days show up here."));
+      return;
+    }
+    cards.slice(0, 4).forEach(function (c) { box.appendChild(c); });
+  }
+
+  function renderWeekLoad() {
+    var box = todayEls.load;
+    box.innerHTML = "";
+    var mins = [];
+    for (var d = 0; d < 7; d++) mins.push(dayPlanned(d));
+    var max = Math.max(10 * 60, Math.max.apply(null, mins));
+    var conflicts = findConflicts().pairs;
+    var labels = [];
+    for (var i = 0; i < 7; i++) {
+      var col = el("div", "load-day" + (i === todayIndex ? " is-today" : "") + (mins[i] >= PACKED_MINUTES ? " is-packed" : ""));
+      var bar = el("div", "load-bar");
+      var fill = el("div", "load-fill");
+      fill.style.height = Math.round(mins[i] / max * 100) + "%";
+      bar.appendChild(fill);
+      if (conflicts.some(function (p) { return p.day === i; })) bar.appendChild(el("span", "load-conflict"));
+      col.appendChild(bar);
+      col.appendChild(el("span", "load-name", DAY_SHORT[i]));
+      var hrs = Math.round(mins[i] / 30) / 2;
+      col.appendChild(el("span", "load-hours", hrs + "h"));
+      labels.push(DAY_SHORT[i] + " " + hrs + " hours");
+      box.appendChild(col);
+    }
+    box.setAttribute("role", "img");
+    box.setAttribute("aria-label", "Hours planned per day: " + labels.join(", "));
+
+    var deadline = nextUpcomingDeadline();
+    var total = Math.round(mins.reduce(function (a, b) { return a + b; }, 0) / 30) / 2;
+    if (deadline) {
+      var base = deadline.ev.title.replace(/\s+due$/i, "").toLowerCase();
+      var work = weekEvents.filter(function (ev) {
+        return ev !== deadline.ev && ev.title.toLowerCase() === base &&
+          (ev.dayIndex < deadline.day || ev.dayIndex === deadline.day && ev.startMinutes < deadline.ev.startMinutes);
+      }).reduce(function (sum, ev) { return sum + plannedMinutes(ev); }, 0);
+      todayEls.loadNote.textContent = deadline.ev.title.replace(/\s+due$/i, "") + " is due " +
+        (deadline.day === todayIndex ? "today" : DAY_NAMES[deadline.day]) + ". " +
+        (work ? "You've blocked off " + formatSpan(work) + " for it this week." : "There's no time blocked off for it yet.");
+    } else {
+      todayEls.loadNote.textContent = weekEvents.length ? total + " hours planned this week." : "";
+    }
+  }
+
+  // Short confirmation for actions that change the week from the Today view
+  function announce(message) {
+    var live = document.getElementById("todayAnnounce");
+    if (!live) {
+      live = el("p", "today-announce");
+      live.id = "todayAnnounce";
+      live.setAttribute("role", "status");
+      todayEls.headsUp.parentNode.insertBefore(live, todayEls.headsUp);
+    }
+    live.textContent = "✓ " + message;
+  }
+
+  function focusQuickAdd(e) {
+    var title = document.getElementById("quickAddTitle");
+    if (!title) return;
+    if (e) e.preventDefault();
+    goTo("calendars");
+    var form = document.getElementById("quickAddForm");
+    if (form) form.scrollIntoView({ block: "center" });
+    setTimeout(function () { title.focus({ preventScroll: true }); }, 350);
+  }
+
+  var TODAY_STATUS = { done: "✓ Done", over: "Ran over", skipped: "Didn't happen" };
+  var CATEGORY_LABELS = { class: "Class", assignment: "Assignment", personal: "Personal", work: "Work", timewise: "TimeWise" };
+
+  if (todayEls.list) {
+    var addBtn = document.getElementById("todayAddBtn");
+    if (addBtn) addBtn.addEventListener("click", focusQuickAdd);
+    var sampleAdd = document.getElementById("todaySampleAdd");
+    if (sampleAdd) sampleAdd.addEventListener("click", focusQuickAdd);
+    var behind = document.getElementById("todayBehindBtn");
+    if (behind) behind.addEventListener("click", function (e) { e.preventDefault(); replanDayAndGo(todayIndex); });
+    // Keep "now" honest while the page stays open
+    setInterval(function () { if (!document.hidden) renderToday(); }, 60000);
+
+    // App tabs: highlight the section on screen
+    var tabs = document.querySelectorAll("#appTabs a");
+    if (tabs.length && "IntersectionObserver" in window) {
+      var spy = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          tabs.forEach(function (t) {
+            if (t.getAttribute("href") === "#" + entry.target.id) t.setAttribute("aria-current", "true");
+            else t.removeAttribute("aria-current");
+          });
+        });
+      }, { rootMargin: "-45% 0px -50% 0px" });
+      ["today", "calendars", "replan", "reality"].forEach(function (id) {
+        var sec = document.getElementById(id);
+        if (sec) spy.observe(sec);
+      });
+    }
+  }
 
   // The week grid, Replan, and Plan vs. Reality live on try.html — only start
   // them (and look for real calendar connections) on a page that has them.

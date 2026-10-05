@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TimeWise — Practice Time Management, One Question at a Time</title>
-  <meta name="description" content="TimeWise helps college students reflect on how they spend their time, connect habits to goals and deadlines, and build a realistic plan — one short question at a time." />
+  <title>TimeWise — For weeks that don't go as planned</title>
+  <meta name="description" content="TimeWise shows college students what's next, warns them when a day is packed, and reshuffles the rest of the day when they fall behind." />
 
   <!--
     Social preview (Open Graph + Twitter Card): the URLs below assume the
@@ -15,29 +15,29 @@
   -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="TimeWise" />
-  <meta property="og:title" content="TimeWise — Build Better Time Habits, One Small Win at a Time" />
-  <meta property="og:description" content="A time management skill-practice app concept for college students — reflection meets practical planning, one short question at a time." />
+  <meta property="og:title" content="TimeWise — For weeks that don't go as planned" />
+  <meta property="og:description" content="A planning app concept for college students: see what's next, spot packed days, and fix the rest of the day when you fall behind." />
   <meta property="og:url" content="https://kbradeis.github.io/TimeWise/" />
   <meta property="og:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+  <meta property="og:image:alt" content="TimeWise — For weeks that don't go as planned." />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="TimeWise — Build Better Time Habits, One Small Win at a Time" />
-  <meta name="twitter:description" content="A time management skill-practice app concept for college students — reflection meets practical planning, one short question at a time." />
+  <meta name="twitter:title" content="TimeWise — For weeks that don't go as planned" />
+  <meta name="twitter:description" content="A planning app concept for college students: see what's next, spot packed days, and fix the rest of the day when you fall behind." />
   <meta name="twitter:image" content="https://kbradeis.github.io/TimeWise/assets/og-image.jpg" />
-  <meta name="twitter:image:alt" content="TimeWise — Build better time habits, one small win at a time." />
+  <meta name="twitter:image:alt" content="TimeWise — For weeks that don't go as planned." />
 
   <!-- Favicon (SVG for modern browsers, .ico fallback for older ones) -->
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <link rel="alternate icon" href="favicon.ico" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 
-  <!-- Friendly rounded font, with solid system-font fallback if offline -->
+  <!-- Schibsted Grotesk (headings), Atkinson Hyperlegible Next (reading), IBM Plex Mono (times); system fallbacks if offline -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=IBM+Plex+Mono:wght@500&family=Schibsted+Grotesk:wght@600;700;800&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -47,9 +47,9 @@
        Same on every page (index, about, try, practice) — edit all four together. -->
   <header class="site-header">
     <div class="container nav-wrap">
-      <a href="#top" class="logo" aria-label="TimeWise home">
+      <a href="index.html" class="logo" aria-label="TimeWise home">
         <span class="logo-mark" aria-hidden="true">⏳</span>
-        <span class="logo-text">TimeWise</span>
+        <span class="logo-text">Time<b>Wise</b></span>
       </a>
 
       <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="primaryNav" aria-label="Toggle navigation menu">
@@ -57,10 +57,10 @@
       </button>
 
       <nav class="primary-nav" id="primaryNav">
-        <a href="about.html">The Idea</a>
-        <a href="try.html">Try It</a>
+        <a href="about.html">Why TimeWise</a>
+        <a href="try.html">Try it</a>
         <a href="practice.html">Practice</a>
-        <a href="#early-access" class="btn btn-primary btn-small">Get Early Access</a>
+        <a href="#early-access" class="btn btn-primary btn-small">Get early access</a>
       </nav>
     </div>
   </header>
@@ -68,158 +68,94 @@
   <main id="top">
 
     <!-- ============ HERO ============ -->
-    <section class="hero">
-      <div class="container hero-grid">
-        <div class="hero-copy">
-          <p class="eyebrow">A skill-practice app for college life</p>
-          <h1>Build better time habits, <span class="text-gradient">one small win at a time.</span></h1>
-          <p class="hero-sub">
-            TimeWise helps college students reflect on how their time is really spent, connect that
-            to their goals and deadlines, and choose a practical next step — through short, encouraging
-            practice sessions instead of another guilt-inducing to-do list.
+    <section class="home-hero">
+      <div class="container home-hero-grid">
+        <div class="home-hero-copy">
+          <h1>For weeks that don't go as planned.</h1>
+          <p class="home-hero-sub">
+            TimeWise shows what's next, warns you when a day is packed, and reshuffles the rest of your day
+            when you fall behind. It's built for students juggling classes, shifts, practice, and everything else.
           </p>
-          <div class="hero-ctas">
-            <a href="try.html" class="btn btn-primary btn-large">Try the Demo</a>
-            <a href="#early-access" class="btn btn-secondary btn-large">Get Early Access</a>
+          <div class="home-hero-ctas">
+            <a href="try.html" class="btn btn-primary btn-large">Try it with a sample week</a>
+            <a href="#early-access" class="btn btn-secondary btn-large">Get early access</a>
           </div>
-          <div class="hero-trust">
-            <span class="pill pill-purple">🎯 Reflection + planning</span>
-            <span class="pill pill-green">🌱 Encouraging, never shaming</span>
-            <span class="pill pill-orange">⚡ 2-minute practice sessions</span>
-          </div>
+          <p class="home-hero-note">No sign-up needed to try it. Sign in with Google if you want your week saved.</p>
         </div>
 
-        <div class="hero-visual" aria-hidden="true">
-          <div class="floating-card card-1">
-            <span class="card-emoji">🔥</span>
-            <div>
-              <strong>7-day streak</strong>
-              <small>Keep it going!</small>
-            </div>
+        <figure class="home-shot">
+          <div class="mini-today" aria-hidden="true">
+            <div class="mini-head"><span>Monday</span><span>3 things left</span></div>
+            <div class="mini-row is-past" style="--cat: var(--cat-class)"><span class="time">9:30</span><span class="mini-t">BUS 131A Lecture</span><span class="mini-ok">✓ Done</span></div>
+            <div class="mini-now"><span class="time">11:04</span></div>
+            <div class="mini-row is-next" style="--cat: var(--cat-assignment)"><span class="time">11:00</span><span class="mini-t"><b class="mini-badge">Now</b>Econ problem set</span></div>
+            <div class="mini-row" style="--cat: var(--cat-work)"><span class="time">2:00</span><span class="mini-t">Shift at Campus Café</span></div>
+            <div class="mini-free"><span class="time">5:00</span><span>1 hour free</span></div>
+            <div class="mini-row" style="--cat: var(--cat-assignment)"><span class="time">8:00</span><span class="mini-t">Essay draft</span></div>
+            <div class="mini-note"><strong>Wednesday is packed.</strong> 9h 50m planned. <u>Replan Wednesday</u></div>
           </div>
-          <div class="floating-card card-2">
-            <span class="card-emoji">✅</span>
-            <div>
-              <strong>Nice work!</strong>
-              <small>+15 XP earned</small>
-            </div>
-          </div>
-          <div class="hero-blob"></div>
-          <div class="hero-emoji-big">🗓️</div>
-        </div>
+          <figcaption>The Today screen from the demo, showing Maya's sample week.</figcaption>
+        </figure>
       </div>
     </section>
 
-    <!-- ============ PROBLEM ============ -->
-    <section id="problem" class="section problem">
-      <div class="container">
-        <p class="eyebrow eyebrow-center">The Problem</p>
-        <h2 class="section-title">College life moves fast. Time management often doesn't keep up.</h2>
-        <p class="section-lead">
-          Most students aren't lazy or bad at planning — they're juggling a lot at once, without a simple
-          way to see the whole picture or practice doing something about it.
-        </p>
-
-        <div class="grid grid-4">
-          <div class="info-card">
-            <div class="info-icon icon-purple">📚</div>
-            <h3>Assignments &amp; deadlines</h3>
-            <p>Multiple classes mean overlapping due dates that are easy to lose track of.</p>
-          </div>
-          <div class="info-card">
-            <div class="info-icon icon-orange">⏳</div>
-            <h3>Procrastination</h3>
-            <p>Starting feels harder than it should be, especially without a clear first step.</p>
-          </div>
-          <div class="info-card">
-            <div class="info-icon icon-blue">🌀</div>
-            <h3>Overload</h3>
-            <p>Everything feels urgent at once, which makes it hard to know where to focus.</p>
-          </div>
-          <div class="info-card">
-            <div class="info-icon icon-green">⚖️</div>
-            <h3>Balancing it all</h3>
-            <p>School, work, family, friendships, and rest all compete for the same 24 hours.</p>
-          </div>
+    <!-- ============ THE PROBLEM, AS A DAY ============ -->
+    <section class="section home-day" id="problem">
+      <div class="container home-day-grid">
+        <div>
+          <h2 class="section-title">One thing runs late, and the whole day slides.</h2>
+          <p class="section-lead">
+            Most students don't need a stricter schedule. They need help when the schedule stops matching the day.
+            Here's a normal Monday for Maya, a junior with 15 credits, a campus job, and a club to run.
+          </p>
         </div>
+        <ol class="day-slide">
+          <li><span class="time">9:30</span><p>Lecture runs ten minutes over. She grabs coffee on the way out.</p></li>
+          <li><span class="time">11:20</span><p>Starts the problem set 20 minutes late, so it eats into lunch.</p></li>
+          <li><span class="time">2:00</span><p>Café shift. This one can't move.</p></li>
+          <li><span class="time">6:00</span><p>Skips the gym to catch up on the problem set.</p></li>
+          <li><span class="time">10:45</span><p>The essay draft never happened. Tomorrow already looks full.</p></li>
+        </ol>
       </div>
     </section>
 
-    <!-- ============ HOW IT WORKS ============ -->
-    <section id="how-it-works" class="section how-it-works">
+    <!-- ============ WHAT IT DOES ============ -->
+    <section class="section home-features" id="how-it-works">
       <div class="container">
-        <p class="eyebrow eyebrow-center">How It Works</p>
-        <h2 class="section-title section-title-center">Four simple steps</h2>
-
-        <div class="steps-grid">
-          <div class="step-card">
-            <div class="step-num">1</div>
-            <h3>Add goals &amp; deadlines</h3>
-            <p>Quickly note what's coming up — an exam, a paper, a shift, or a personal goal.</p>
-          </div>
-          <div class="step-card">
-            <div class="step-num">2</div>
-            <h3>Practice short questions</h3>
-            <p>Work through bite-sized time management questions, one at a time.</p>
-          </div>
-          <div class="step-card">
-            <div class="step-num">3</div>
-            <h3>Get feedback &amp; track progress</h3>
-            <p>See supportive feedback plus your score, streak, and XP update in real time.</p>
-          </div>
-          <div class="step-card">
-            <div class="step-num">4</div>
-            <h3>Leave with a plan</h3>
-            <p>End each session with a realistic, doable next step for your week.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ TRY IT (links to the interactive pages) ============ -->
-    <section id="try-it" class="section try-it">
-      <div class="container">
-        <p class="eyebrow eyebrow-center">See It Work</p>
-        <h2 class="section-title section-title-center">Try TimeWise right now — no sign-up needed</h2>
-        <p class="section-lead section-lead-center">
-          Every piece of the demo really works. Start with your own week, or follow Maya's.
-        </p>
-
-        <div class="try-cards">
-          <a class="try-card" href="try.html#calendars">
-            <span class="try-card-icon" aria-hidden="true">🗓️</span>
-            <h3>Your week</h3>
-            <p>Connect Google Calendar or Notion, upload a calendar file, or type in a few classes.</p>
-            <span class="try-card-link">Load my week →</span>
-          </a>
-          <a class="try-card" href="try.html#replan">
-            <span class="try-card-icon" aria-hidden="true">🔀</span>
-            <h3>Replan my day</h3>
-            <p>Running late? Watch the rest of your day reshuffle around what can't move.</p>
-            <span class="try-card-link">Replan a day →</span>
-          </a>
-          <a class="try-card" href="try.html#reality">
-            <span class="try-card-icon" aria-hidden="true">🔍</span>
-            <h3>Plan vs. Reality</h3>
-            <p>Mark what actually happened and get one honest insight plus one realistic next step.</p>
-            <span class="try-card-link">Reflect on a day →</span>
-          </a>
-          <a class="try-card" href="practice.html">
-            <span class="try-card-icon" aria-hidden="true">💬</span>
-            <h3>Practice session</h3>
-            <p>Ten quick time-management questions with friendly feedback, streaks, and XP.</p>
-            <span class="try-card-link">Start practicing →</span>
-          </a>
-        </div>
+        <h2 class="section-title">What TimeWise does about it</h2>
+        <ul class="feature-rows">
+          <li>
+            <h3>See today at a glance</h3>
+            <p>What's happening now, what's next, and how much free time you actually have before the day ends. Overlaps and overloaded days get flagged before they become a problem.</p>
+            <a href="try.html#today">Open Today →</a>
+          </li>
+          <li>
+            <h3>Fix the rest of the day when you fall behind</h3>
+            <p>Say how late you're running. Classes and shifts stay where they are, everything else shifts, and whatever won't fit moves to tomorrow.</p>
+            <a href="try.html#replan">Try replanning →</a>
+          </li>
+          <li>
+            <h3>Look back without the guilt trip</h3>
+            <p>Mark what happened to each block. You'll see one pattern (like an overrun that knocked out the evening) and one small change for tomorrow.</p>
+            <a href="try.html#reality">Look back on a day →</a>
+          </li>
+          <li>
+            <h3>Works with the calendar you already have</h3>
+            <p>Read-only connections to Google Calendar and Notion, or upload a calendar file from Apple Calendar, Outlook, or Moodle.</p>
+            <a href="try.html#calendars">Bring in a calendar →</a>
+          </li>
+        </ul>
+        <p class="home-practice">Want to practice the skill itself? <a href="practice.html">Try a 2-minute practice session</a>.</p>
       </div>
     </section>
 
     <!-- ============ FINAL CTA ============ -->
-    <section id="early-access" class="section final-cta early-access">
-      <div class="container final-cta-inner">
-        <h2>Want TimeWise when it launches?</h2>
-        <p>Join the early-access list and answer three quick questions. It takes about 20 seconds and
-          directly shapes what gets built first.</p>
+    <section id="early-access" class="section early-access">
+      <div class="container early-grid">
+        <div class="early-intro">
+          <h2 class="section-title">Want TimeWise when it launches?</h2>
+          <p class="section-lead">Three quick questions, about 20 seconds. Your answers decide what gets built first.</p>
+        </div>
 
         <form class="early-card" id="earlyAccessForm" novalidate>
           <label class="quick-add-field early-email">
@@ -262,19 +198,18 @@
           <!-- Honeypot: hidden from people, bots tend to fill it in -->
           <label class="early-honeypot" aria-hidden="true">Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
 
-          <button type="submit" class="btn btn-primary btn-full" id="earlySubmit">Join early access</button>
+          <button type="submit" class="btn btn-primary btn-full" id="earlySubmit">Join the early-access list</button>
           <p class="ics-status" id="earlyStatus" aria-live="polite"></p>
           <p class="early-privacy">
-            Your email is only used to tell you when TimeWise launches. To learn what's useful, this site also
-            counts anonymously which demo features visitors try — no names, no ads, nothing sold.
+            Your email is only used to tell you when TimeWise launches. The site also counts which demo features
+            get used, anonymously. No names, no ads, nothing sold.
           </p>
         </form>
 
         <div class="early-card early-thanks" id="earlyThanks" hidden tabindex="-1">
-          <span class="early-thanks-icon" aria-hidden="true">🎉</span>
-          <h3>You're in — thank you!</h3>
+          <h3>You're on the list. Thank you.</h3>
           <p id="earlyThanksText">Your answers help decide what TimeWise builds first.</p>
-          <a href="try.html" class="btn btn-secondary btn-small">Keep exploring the demo</a>
+          <a href="try.html" class="btn btn-secondary btn-small">Back to the demo</a>
         </div>
       </div>
     </section>
@@ -286,21 +221,21 @@
     <div class="container footer-grid">
       <div class="footer-brand">
         <span class="logo-mark" aria-hidden="true">⏳</span>
-        <span class="logo-text">TimeWise</span>
-        <p>A time management skill-practice app concept for college students.</p>
+        <span class="logo-text">Time<b>Wise</b></span>
+        <p>A planning app concept for college students whose weeks don't go as planned.</p>
       </div>
 
       <nav class="footer-nav" aria-label="Footer navigation">
         <a href="index.html" aria-current="page">Home</a>
-        <a href="about.html">The Idea</a>
-        <a href="try.html">Try It</a>
+        <a href="about.html">Why TimeWise</a>
+        <a href="try.html">Try it</a>
         <a href="practice.html">Practice</a>
-        <a href="#early-access">Get Early Access</a>
+        <a href="#early-access">Get early access</a>
         <a href="privacy.html">Privacy</a>
       </nav>
     </div>
     <div class="container footer-bottom">
-      <p>TimeWise is a student project concept — built to explore how reflection and practical planning can go hand in hand. 🌱</p>
+      <p>TimeWise is a student project concept — built to explore how reflection and practical planning can go hand in hand.</p>
     </div>
   </footer>
 
