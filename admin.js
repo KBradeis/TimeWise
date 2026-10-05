@@ -52,7 +52,8 @@
     ["calendar_google", "Connected Google Calendar"], ["calendar_notion", "Connected Notion"], ["calendar_ics", "Uploaded a calendar file"],
     ["event_added", "Added an event by hand"], ["replan_used", "Tried Replan my day"], ["replan_applied", "Applied a replan"],
     ["reflection_viewed", "Saw a reflection"], ["reflection_step_added", "Added a suggested next step"],
-    ["quiz_completed", "Finished the practice quiz"], ["waitlist_joined", "Answered the early-access form"], ["feedback_sent", "Sent feedback"]
+    ["quiz_completed", "Finished the practice quiz"], ["waitlist_joined", "Answered the early-access form"], ["feedback_sent", "Sent feedback"],
+    ["week_copied", "Copied last week's plan"], ["colors_customized", "Customized calendar colors"]
   ];
   var label = function (list, key) { var m = list.filter(function (x) { return x[0] === key; })[0]; return m ? m[1] : (key || "—"); };
 

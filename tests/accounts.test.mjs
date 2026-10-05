@@ -186,6 +186,17 @@ r = await call('/api/me/week', { method: 'PUT', cookie: A.session, body: { weekS
 check('Over-long title rejected', r.status === 400);
 r = await call('/api/me/week', { method: 'PUT', cookie: A.session, body: { weekStart: week, events: [{ ...evA[0], category: '<script>' }] } });
 check('Unknown category rejected', r.status === 400);
+r = await call('/api/me/week', { method: 'PUT', cookie: A.session, body: { weekStart: '2026-09-21', events: [{ ...evA[0], title: 'Library shift', category: 'work', reality: null }] } });
+check('Work category accepted', r.status === 200);
+r = await call('/api/me/week', { method: 'PUT', cookie: A.session, body: { weekStart: '2026-09-14', events: [{ ...evA[0], reality: { status: 'swapped', detail: 'urgent' } }] } });
+r = await call('/api/me/week?start=2026-09-14', { cookie: A.session });
+check('Old "swapped" check-ins are saved as "skipped"', r.data.events[0].reality.status === 'skipped' && r.data.events[0].reality.detail === 'urgent');
+r = await call('/api/me/week?start=2026-09-21', { cookie: A.session });
+check('Work category saved and returned', r.status === 200 && r.data.events[0].category === 'work');
+r = await call('/api/track', { method: 'POST', body: { visitorId: 'visitor-5678efgh', event: 'week_copied' } });
+check('week_copied is a tracked event', r.status === 204);
+r = await call('/api/track', { method: 'POST', body: { visitorId: 'visitor-5678efgh', event: 'colors_customized' } });
+check('colors_customized is a tracked event', r.status === 204);
 r = await call('/api/me/week', { method: 'PUT', cookie: A.session, body: { weekStart: "2026-09-28'; DROP TABLE users;--", events: [] } });
 check('Injection attempt in week date rejected', r.status === 400 && sql('SELECT COUNT(*) n FROM users')[0].n > 0);
 r = await call('/api/me/week', { method: 'PUT', cookie: A.session, body: '{not json' });

@@ -14,7 +14,7 @@
   var FEATURE = { home: "Home", the_idea: "The Idea", your_week: "Your week", calendars: "Calendars", replan: "Replan",
     reflect: "Plan vs. Reality", practice: "Practice", early_access: "Early access", account: "My account", other: "Other" };
   var STATUS = { new: "Received", reviewing: "Being reviewed", resolved: "Resolved" };
-  var REALITY = { done: "✓ Done", over: "⏱ Ran over", swapped: "↷ Swapped", skipped: "✕ Skipped" };
+  var REALITY = { done: "✓ Done", over: "⏱ Ran over", swapped: "✕ Skipped", skipped: "✕ Skipped" }; // "swapped" = older saves
 
   function el(tag, className, text) {
     var e = document.createElement(tag);

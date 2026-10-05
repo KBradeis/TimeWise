@@ -53,7 +53,7 @@ const LIMITS = {
 };
 
 // Shapes allowed in a saved week (mirrors the event object in script.js)
-const EVENT_CATEGORIES = ["class", "assignment", "personal", "timewise"];
+const EVENT_CATEGORIES = ["class", "assignment", "personal", "work", "timewise"];
 const EVENT_SOURCES = ["sample", "manual", "google", "notion", "ics", "timewise", "google-demo", "notion-demo"];
 const REALITY_STATUSES = ["done", "over", "swapped", "skipped"];
 const REALITY_REASONS = ["", "overflow", "energy", "urgent", "distracted", "bigger", "avoid"];
@@ -345,7 +345,8 @@ function cleanEvent(e) {
     const r = e.reality;
     if (!REALITY_STATUSES.includes(r.status)) return null;
     if (r.status === "over" ? !isInt(r.detail, 0, 600) : !REALITY_REASONS.includes(r.detail || "")) return null;
-    reality = { status: r.status, detail: r.status === "over" ? r.detail : (r.detail || "") };
+    // "Swapped" was merged into "Skipped"; older pages may still send it
+    reality = { status: r.status === "swapped" ? "skipped" : r.status, detail: r.status === "over" ? r.detail : (r.detail || "") };
   }
   return {
     title: e.title.trim(),

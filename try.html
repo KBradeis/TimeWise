@@ -99,15 +99,27 @@
               <p class="week-grid-note" id="weekGridNote"></p>
               <p class="week-save-status" id="weekSaveStatus" aria-live="polite"></p>
             </div>
-            <button type="button" class="week-clear-btn" id="weekClearBtn">Clear my week</button>
+            <div class="week-grid-actions">
+              <button type="button" class="week-clear-btn week-copy-btn" id="weekCopyBtn" hidden>↻ Copy last week</button>
+              <button type="button" class="week-clear-btn" id="weekClearBtn">Clear my week</button>
+            </div>
           </div>
           <div class="week-grid" id="weekGrid"></div>
           <div class="week-grid-legend">
             <span class="week-legend-item"><span class="week-legend-dot week-event-class"></span>Class</span>
             <span class="week-legend-item"><span class="week-legend-dot week-event-assignment"></span>Assignment</span>
             <span class="week-legend-item"><span class="week-legend-dot week-event-personal"></span>Personal</span>
+            <span class="week-legend-item"><span class="week-legend-dot week-event-work"></span>Work</span>
             <span class="week-legend-item"><span class="week-legend-dot week-event-timewise"></span>TimeWise suggestion</span>
           </div>
+          <details class="color-settings" id="colorSettings">
+            <summary>🎨 Customize colors</summary>
+            <div class="color-settings-grid" id="colorSettingsGrid"></div>
+            <p class="color-settings-note">
+              Saved in this browser.
+              <button type="button" class="color-reset-btn" id="colorResetBtn">Reset to default colors</button>
+            </p>
+          </details>
         </div>
 
         <div class="calendar-connect-panel">
@@ -127,6 +139,7 @@
                   <option value="class">Class</option>
                   <option value="assignment">Assignment</option>
                   <option value="personal">Personal</option>
+                  <option value="work">Work</option>
                 </select>
               </label>
             </div>

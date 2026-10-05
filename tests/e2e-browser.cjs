@@ -97,6 +97,7 @@ async function signInAs(page, who, from = '/try.html') {
   const bTitles = await B.page.$$eval('.week-event-title', (els) => els.map((e) => e.textContent));
   check('User B does not see User A\'s saved week', !bTitles.includes('Alex secret study block'));
   await B.page.goto(BASE + '/account.html'); await B.page.waitForSelector('#my-weeks .empty-note, #my-weeks details');
+  await B.page.waitForFunction(() => /haven't sent|feedback-item/.test(document.getElementById('my-feedback').innerHTML), null, { timeout: 5000 }).catch(() => {});
   check('User B\'s account shows no saved weeks and no feedback', (await B.page.textContent('#my-weeks')).includes('Nothing saved yet') && (await B.page.textContent('#my-feedback')).includes("haven't sent"));
 
   console.log('\nAdmin');

@@ -447,16 +447,16 @@
      renderAll() repaints both the week grid and the Plan vs. Reality
      check-in below it. Event shape:
        { id, title, dayIndex (0 = Mon … 6 = Sun), startMinutes, endMinutes,
-         allDay, category ("class" | "assignment" | "personal" | "timewise"),
+         allDay, category ("class" | "assignment" | "personal" | "work" | "timewise"),
          source ("sample" | "manual" | "google" | "notion" | "ics" | "timewise"),
          reality: null | { status, detail } }
      Nothing here is saved — it all lives in memory for this page visit. */
   var DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   var DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  var CATEGORIES = ["class", "assignment", "personal", "timewise"];
+  var CATEGORIES = ["class", "assignment", "personal", "work", "timewise"];
   var SOURCE_TAGS = { "google-demo": "Demo", "notion-demo": "Demo", google: "Google", notion: "Notion", timewise: "TimeWise" };
-  var STATUS_ICONS = { done: "✓", over: "⏱", swapped: "↷", skipped: "✕" };
-  var STATUS_LABELS = { done: "Done", over: "Ran over", swapped: "Swapped", skipped: "Skipped" };
+  var STATUS_ICONS = { done: "✓", over: "⏱", skipped: "✕" };
+  var STATUS_LABELS = { done: "Done", over: "Ran over", skipped: "Skipped" };
 
   function startOfWeek(date) {
     var d = new Date(date);
@@ -564,7 +564,7 @@
   var SAMPLE_WEEK = [
     [0, "BUS 131A Lecture", 570, 650, "class"],
     [0, "Econ problem set", 660, 750, "assignment"],
-    [0, "Shift at Campus Café", 840, 1020, "personal"],
+    [0, "Shift at Campus Café", 840, 1020, "work"],
     [0, "Gym", 1080, 1140, "personal"],
     [0, "Essay draft", 1200, 1320, "assignment"],
     [1, "BIO 201 Lecture", 600, 675, "class"],
@@ -573,14 +573,14 @@
     [1, "Read Ch. 5 + notes", 1170, 1260, "assignment"],
     [2, "BUS 131A Lecture", 570, 650, "class"],
     [2, "Econ problem set", 660, 750, "assignment"],
-    [2, "Shift at Campus Café", 840, 1020, "personal"],
+    [2, "Shift at Campus Café", 840, 1020, "work"],
     [2, "Essay draft", 1200, 1320, "assignment"],
     [3, "BIO 201 Lecture", 600, 675, "class"],
     [3, "Study group: Calc II", 1080, 1200, "assignment"],
     [3, "Econ problem set due", 1439, null, "assignment"],
     [4, "BUS 131A Lecture", 570, 650, "class"],
     [4, "Group project meeting", 720, 780, "class"],
-    [4, "Shift at Campus Café", 840, 1080, "personal"],
+    [4, "Shift at Campus Café", 840, 1080, "work"],
     [5, "Laundry + errands", 660, 750, "personal"],
     [5, "Dinner with friends", 1110, 1230, "personal"],
     [6, "Weekly reset: plan next week", 1020, 1050, "personal"],
@@ -699,6 +699,75 @@
     renderReplanResult();
   }
 
+  /* ----- Customize colors (saved in this browser only) ----- */
+  var COLOR_KEY = "timewise-category-colors";
+  var DEFAULT_COLORS = { class: "#6c5ce7", assignment: "#fb923c", personal: "#4f8ef7", work: "#0d9488", timewise: "#22c55e" };
+  var COLOR_LABELS = { class: "Class", assignment: "Assignment", personal: "Personal", work: "Work", timewise: "TimeWise suggestion" };
+  var colorSettingsGrid = document.getElementById("colorSettingsGrid");
+  var colorResetBtn = document.getElementById("colorResetBtn");
+
+  function loadCategoryColors() {
+    var saved = {};
+    try { saved = JSON.parse(window.localStorage.getItem(COLOR_KEY) || "{}") || {}; } catch (e) { saved = {}; }
+    var colors = {};
+    Object.keys(DEFAULT_COLORS).forEach(function (k) {
+      colors[k] = /^#[0-9a-f]{6}$/i.test(saved[k] || "") ? saved[k].toLowerCase() : DEFAULT_COLORS[k];
+    });
+    return colors;
+  }
+
+  function applyCategoryColors(colors) {
+    Object.keys(colors).forEach(function (k) {
+      document.documentElement.style.setProperty("--cat-" + k, colors[k]);
+    });
+  }
+
+  function saveCategoryColors(colors) {
+    var changed = {};
+    Object.keys(colors).forEach(function (k) { if (colors[k] !== DEFAULT_COLORS[k]) changed[k] = colors[k]; });
+    try {
+      if (Object.keys(changed).length) window.localStorage.setItem(COLOR_KEY, JSON.stringify(changed));
+      else window.localStorage.removeItem(COLOR_KEY);
+    } catch (e) { /* private mode: colors last for this visit */ }
+  }
+
+  function renderColorSettings() {
+    if (!colorSettingsGrid) return;
+    var colors = loadCategoryColors();
+    colorSettingsGrid.innerHTML = "";
+    Object.keys(DEFAULT_COLORS).forEach(function (k) {
+      var label = document.createElement("label");
+      label.className = "color-setting";
+      var input = document.createElement("input");
+      input.type = "color";
+      input.value = colors[k];
+      input.setAttribute("data-category", k);
+      input.addEventListener("input", function () {
+        colors[k] = input.value.toLowerCase();
+        applyCategoryColors(colors);
+      });
+      input.addEventListener("change", function () {
+        colors[k] = input.value.toLowerCase();
+        applyCategoryColors(colors);
+        saveCategoryColors(colors);
+        track("colors_customized");
+      });
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(COLOR_LABELS[k]));
+      colorSettingsGrid.appendChild(label);
+    });
+  }
+
+  applyCategoryColors(loadCategoryColors());
+  renderColorSettings();
+  if (colorResetBtn) {
+    colorResetBtn.addEventListener("click", function () {
+      saveCategoryColors(DEFAULT_COLORS);
+      applyCategoryColors(DEFAULT_COLORS);
+      renderColorSettings();
+    });
+  }
+
   if (weekClearBtn) {
     weekClearBtn.addEventListener("click", function () {
       if (weekEvents.length) {
@@ -794,6 +863,7 @@
   var GOOGLE_CLIENT_ID = "492214082626-5a6bpa473fflej1ebaseiurktropul02.apps.googleusercontent.com"; // e.g. "123456789-abc123.apps.googleusercontent.com"
   var GOOGLE_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
   var MAX_GOOGLE_CALENDARS = 10;
+  var WORK_WORDS = /\b(work|job|shift|shifts|internship)\b/i;
 
   const providerButtons = document.querySelectorAll(".provider-btn");
   const providerStatusNote = document.getElementById("providerStatusNote");
@@ -875,7 +945,7 @@
         startMinutes: startMinutes,
         endMinutes: endMinutes,
         allDay: item.allDay,
-        category: guessCategory(item.title),
+        category: item.category || guessCategory(item.title),
         source: source
       });
       added++;
@@ -982,7 +1052,11 @@
             singleEvents: "true", // expands repeating events (like weekly classes)
             orderBy: "startTime",
             maxResults: "100"
-          }).then(function (data) { return data.items || []; }, function () { return []; });
+          }).then(function (data) {
+            // Events from a calendar named like "Work" or "Job" are labeled Work
+            var isWork = WORK_WORDS.test(cal.summaryOverride || cal.summary || "");
+            return (data.items || []).map(function (ev) { ev.fromWorkCalendar = isWork; return ev; });
+          }, function () { return []; });
         })).then(function (lists) {
           return { calendars: calendars.length, items: [].concat.apply([], lists) };
         });
@@ -994,6 +1068,7 @@
             var allDay = !ev.start.dateTime;
             return {
               title: ev.summary || "(No title)",
+              category: ev.fromWorkCalendar ? "work" : null,
               start: allDay ? parseLocalDate(ev.start.date) : new Date(ev.start.dateTime),
               end: ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : null,
               allDay: allDay
@@ -1323,6 +1398,7 @@
         /\b[a-z]{2,4}\s?\d{2,3}[a-z]?\b/.test(t)) {
       return "class";
     }
+    if (/\b(shift|job|internship)\b/.test(t) || /^work\b(?!\s*out)/.test(t)) return "work";
     return "personal";
   }
 
@@ -1401,7 +1477,7 @@
      small rule-based engine (buildReflection) turns it into one insight and
      one concrete next step — which can be added straight onto the next day
      in the week grid. No AI or server involved: every rule is below. */
-  var REALITY_STATUSES = ["done", "over", "swapped", "skipped"];
+  var REALITY_STATUSES = ["done", "over", "skipped"]; // "Swapped" was merged into "Skipped"
   var REALITY_REASONS = [
     ["", "What got in the way? (optional)"],
     ["overflow", "Something earlier ran long"],
@@ -1436,7 +1512,7 @@
 
   /* ----- The reflection engine ----- */
   function slipPhrase(ev) {
-    return ev.reality.status === "skipped" ? "got skipped" : "got swapped out";
+    return "got skipped";
   }
 
   function nextDayInfo(dayIndex) {
@@ -1520,14 +1596,14 @@
     var marked = events.filter(function (ev) { return ev.reality; });
     if (!marked.length) return null;
 
-    var counts = { done: 0, over: 0, swapped: 0, skipped: 0 };
+    var counts = { done: 0, over: 0, skipped: 0 };
     var overMinutes = 0;
     marked.forEach(function (ev) {
       counts[ev.reality.status]++;
       if (ev.reality.status === "over") overMinutes += Number(ev.reality.detail) || 0;
     });
 
-    var slips = marked.filter(function (ev) { return ev.reality.status === "swapped" || ev.reality.status === "skipped"; });
+    var slips = marked.filter(function (ev) { return ev.reality.status === "skipped"; });
     var overs = marked.filter(function (ev) { return ev.reality.status === "over"; });
 
     var tally = {};
@@ -1647,7 +1723,7 @@
     events.forEach(function (ev, i) {
       if (n >= 3 && i === n - 1) ev.reality = { status: "skipped", detail: "energy" };
       else if (i === 1) ev.reality = { status: "over", detail: 45 };
-      else if (i === 3) ev.reality = { status: "swapped", detail: "overflow" };
+      else if (i === 3) ev.reality = { status: "skipped", detail: "overflow" };
       else ev.reality = { status: "done", detail: "" };
     });
   }
@@ -2007,7 +2083,7 @@
   }
 
   function isFixedByDefault(ev) {
-    if (ev.category === "class") return true;
+    if (ev.category === "class" || ev.category === "work") return true;
     if (ev.category === "timewise" || ev.category === "assignment") return false;
     return FIXED_KEYWORDS.test(ev.title);
   }
@@ -2906,6 +2982,7 @@
         r.body.events.forEach(function (saved) {
           var ev = addWeekEvent(saved);
           ev.reality = saved.reality || null;
+          if (ev.reality && ev.reality.status === "swapped") ev.reality.status = "skipped"; // older saves
         });
         realityState.shown = {};
         realityState.added = {};
@@ -2920,6 +2997,7 @@
         weekSync.enabled = true;
         setWeekSaveStatus("Signed in — changes to your week save automatically.", "success");
       }
+      setupCopyLastWeek();
     }).catch(function () {
       setWeekSaveStatus("Couldn't load your saved week right now.", "error");
     });
@@ -2955,6 +3033,81 @@
       }
     }).catch(function () {
       setWeekSaveStatus("Couldn't save — check your connection.", "error");
+    });
+  }
+
+  /* ----- Copy last week (signed-in, try.html) ----- */
+  var COPY_SKIP_SOURCES = ["sample", "google", "notion", "ics", "google-demo", "notion-demo"];
+
+  function setupCopyLastWeek() {
+    var btn = document.getElementById("weekCopyBtn");
+    if (!btn) return;
+    btn.hidden = false;
+    btn.addEventListener("click", copyLastWeek);
+  }
+
+  function copyLastWeek() {
+    var btn = document.getElementById("weekCopyBtn");
+    var thisWeek = toInputDate(weekStart);
+    btn.disabled = true;
+    setWeekSaveStatus("Looking for your last saved week…", "");
+    apiJson("/api/me/weeks").then(function (r) {
+      if (r.status === 401) throw new Error("signed_out");
+      if (!r.ok) throw new Error("failed");
+      var earlier = (r.body.weeks || []).filter(function (w) { return w.week_start < thisWeek && w.events > 0; })[0];
+      if (!earlier) return { none: true };
+      return apiJson("/api/me/week?start=" + encodeURIComponent(earlier.week_start)).then(function (wr) {
+        if (!wr.ok) throw new Error("failed");
+        return { weekStartStr: earlier.week_start, events: wr.body.events || [] };
+      });
+    }).then(function (result) {
+      btn.disabled = false;
+      if (result.none) {
+        setWeekSaveStatus("No earlier week saved yet. Once you've planned a week, you can copy it here the next week.", "");
+        return;
+      }
+      var copyable = result.events.filter(function (ev) { return COPY_SKIP_SOURCES.indexOf(ev.source) === -1; });
+      var skipped = result.events.length - copyable.length;
+      var clearedSample = weekEvents.some(function (ev) { return ev.source === "sample"; });
+      if (clearedSample && copyable.length) removeWeekEvents(function (ev) { return ev.source === "sample"; });
+
+      var existing = {};
+      weekEvents.forEach(function (ev) { existing[ev.title + "|" + ev.dayIndex + "|" + ev.startMinutes] = true; });
+      var added = 0;
+      copyable.forEach(function (ev) {
+        var key = ev.title + "|" + ev.dayIndex + "|" + ev.startMinutes;
+        if (existing[key]) return;
+        existing[key] = true;
+        addWeekEvent({
+          title: ev.title, dayIndex: ev.dayIndex, startMinutes: ev.startMinutes, endMinutes: ev.endMinutes,
+          allDay: ev.allDay, category: ev.category, source: ev.source
+        }); // reality check-ins aren't copied: this is a fresh week
+        added++;
+      });
+      if (added) {
+        if (clearedSample) {
+          replanState.plan = null;
+          realityState.shown = {};
+          realityState.added = {};
+          realityState.dayIndex = defaultRealityDay();
+        }
+        renderAll(); // saves automatically
+        track("week_copied");
+      }
+      var from = new Date(result.weekStartStr + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      var msg = added
+        ? "✓ Copied " + added + " block" + (added === 1 ? "" : "s") + " from the week of " + from + "."
+        : (copyable.length ? "Everything from the week of " + from + " is already on your grid."
+                           : "The week of " + from + " only had calendar-connected events.");
+      if (skipped) msg += " Events from Google, Notion, or a calendar file weren't copied. Reconnect to get this week's.";
+      setWeekSaveStatus(msg, added ? "success" : "");
+    }).catch(function (err) {
+      btn.disabled = false;
+      if (err && err.message === "signed_out") {
+        setWeekSaveStatus("You've been signed out.", "error", signInUrl(), "Sign in again");
+      } else {
+        setWeekSaveStatus("Couldn't copy last week right now. Please try again.", "error");
+      }
     });
   }
 

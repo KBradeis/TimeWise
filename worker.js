@@ -277,7 +277,7 @@ const SURVEY = {
 const TRACKED_EVENTS = [
   "visit", "event_added", "calendar_google", "calendar_notion", "calendar_ics",
   "replan_used", "replan_applied", "reflection_viewed", "reflection_step_added",
-  "quiz_completed", "waitlist_joined", "feedback_sent"
+  "quiz_completed", "waitlist_joined", "feedback_sent", "week_copied", "colors_customized"
 ];
 
 let tablesReady = false;
