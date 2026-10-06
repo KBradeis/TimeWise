@@ -10,6 +10,8 @@ const check = (n, ok, x) => { ok ? pass++ : (fail++, fails.push(n + (x !== undef
     const ctx = await b.newContext({ viewport: { width: w, height: h } });
     await ctx.route(/fonts\.g|accounts\.google\.com\/gsi/, (r) => r.abort());
     const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+    const mon = new Date(); mon.setHours(21, 0, 0, 0); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+    await p.clock.setFixedTime(mon); // Maya's example is written for her Monday
     await p.goto(BASE + '/try.html'); await p.waitForTimeout(500);
     const labels = await p.$$eval('.reality-item:first-child .reality-choice', (els) => els.map((e) => e.textContent.trim()));
     check('Each block has 3 choices: Done, Ran over, Skipped', JSON.stringify(labels) === JSON.stringify(['✓ Done', '⏱ Ran over', '✕ Skipped']), labels);

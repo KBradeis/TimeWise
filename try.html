@@ -60,7 +60,7 @@
         <a href="about.html">Why TimeWise</a>
         <a href="try.html" aria-current="page">Try it</a>
         <a href="practice.html">Practice</a>
-        <a href="index.html#early-access" class="btn btn-primary btn-small">Get early access</a>
+        <a href="try.html#setup" class="btn btn-primary btn-small">Start my week</a>
       </nav>
     </div>
   </header>
@@ -96,8 +96,11 @@
         </div>
         <p class="today-sample-note" id="todaySampleNote" hidden>
           This is Maya's sample week, so you can see how it works.
-          <a href="#calendars" id="todaySampleAdd">Add your own week</a>
+          <button type="button" class="link-btn" id="todaySampleAdd">Set up my own week</button>
         </p>
+
+        <!-- First-run setup (script.js section 18): sign in, add your week, then use Today -->
+        <section class="setup-card" id="setup" hidden aria-labelledby="setupTitle"></section>
 
         <div class="today-grid">
           <section class="today-panel" aria-labelledby="todayListTitle">
@@ -181,11 +184,19 @@
                   </select>
                 </label>
               </div>
+              <fieldset class="quick-add-days">
+                <legend>Days <small>(pick every day it happens this week)</small></legend>
+                <div class="day-chips" id="quickAddDays">
+                  <label><input type="checkbox" name="quickAddDay" value="0" /><span>Mon</span></label>
+                  <label><input type="checkbox" name="quickAddDay" value="1" /><span>Tue</span></label>
+                  <label><input type="checkbox" name="quickAddDay" value="2" /><span>Wed</span></label>
+                  <label><input type="checkbox" name="quickAddDay" value="3" /><span>Thu</span></label>
+                  <label><input type="checkbox" name="quickAddDay" value="4" /><span>Fri</span></label>
+                  <label><input type="checkbox" name="quickAddDay" value="5" /><span>Sat</span></label>
+                  <label><input type="checkbox" name="quickAddDay" value="6" /><span>Sun</span></label>
+                </div>
+              </fieldset>
               <div class="quick-add-row">
-                <label class="quick-add-field">
-                  <span>Day</span>
-                  <input type="date" id="quickAddDate" required />
-                </label>
                 <label class="quick-add-field">
                   <span>Starts</span>
                   <input type="time" id="quickAddStart" required />
@@ -358,8 +369,8 @@
     <!-- ============ NEXT STEP ============ -->
     <section class="quiet-cta">
       <div class="container quiet-cta-inner">
-        <p><strong>Want TimeWise when it launches?</strong> It takes 20 seconds and helps decide what gets built first.</p>
-        <a href="index.html#early-access" class="btn btn-secondary">Get early access</a>
+        <p><strong>Something confusing or missing?</strong> Tell me. Every note goes straight into what gets built next.</p>
+        <button type="button" class="btn btn-secondary" id="quietFeedbackBtn">Send feedback</button>
       </div>
     </section>
 

@@ -80,6 +80,7 @@ export async function handleAccountsApi(request, env, url) {
   if (method === "POST" && path === "/api/auth/logout") return logout(request, env);
   if (method === "GET" && path === "/api/auth/me") {
     const session = await getSession(request, env);
+    if (session) await recordActiveDay(env, session.user, url.searchParams.get("from"));
     return withSessionCookie(session, json(session
       ? { signedIn: true, user: publicUser(session.user) }
       : { signedIn: false, configured: authConfigured(env) }));
@@ -97,6 +98,7 @@ export async function handleAccountsApi(request, env, url) {
   if (path === "/api/me/weeks" && method === "GET") return respond(await listWeeks(env, user));
   if (path === "/api/me/feedback" && method === "GET") return respond(await myFeedback(env, user));
   if (path === "/api/me/delete" && method === "POST") return deleteAccount(request, env, user);
+  if (path === "/api/me/contact" && method === "POST") return respond(await setContactOk(request, env, user));
   if (path === "/api/feedback" && method === "POST") return respond(await submitFeedback(request, env, user));
 
   // ----- Admin only -----
@@ -253,7 +255,7 @@ async function getSession(request, env) {
   if (!token || !/^[A-Za-z0-9_-]{20,100}$/.test(token)) return null;
   const id = await sha256Hex(token);
   const row = await env.DB.prepare(
-    `SELECT s.expires_at, u.id AS user_id, u.email, u.name, u.role, u.status, u.created_at
+    `SELECT s.expires_at, u.id AS user_id, u.email, u.name, u.role, u.status, u.created_at, u.contact_ok, u.source
      FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id = ?1`
   ).bind(id).first();
   const now = Math.floor(Date.now() / 1000);
@@ -266,7 +268,8 @@ async function getSession(request, env) {
 
   const session = {
     id, token, expiresAt: row.expires_at, renew: false,
-    user: { id: row.user_id, email: row.email, name: row.name, role: row.role, createdAt: row.created_at }
+    user: { id: row.user_id, email: row.email, name: row.name, role: row.role, createdAt: row.created_at,
+            contactOk: row.contact_ok === 1, source: row.source || null }
   };
   // Sliding expiry: extend once the session is past the halfway point
   if (row.expires_at - now < (SESSION_DAYS / 2) * DAY) {
@@ -284,8 +287,79 @@ function withSessionCookie(session, res) {
   return res;
 }
 
+/* ---------- Launch tracking ---------- */
+
+// A ?from= link tag: short, lowercase, letters/digits/dashes (e.g. team, class, academic)
+function validSource(value) {
+  return typeof value === "string" && /^[a-z0-9-]{1,24}$/.test(value) ? value : null;
+}
+
+// Called on every signed-in page load. One row per user per day ("returned" = 2+ days),
+// and the first link tag a user ever arrived with. Failures never block the page.
+async function recordActiveDay(env, user, from) {
+  try {
+    const source = validSource(from);
+    const stmts = [env.DB.prepare("INSERT OR IGNORE INTO user_days (user_id, day) VALUES (?1, date('now'))").bind(user.id)];
+    if (source && !user.source) stmts.push(env.DB.prepare("UPDATE users SET source = ?1 WHERE id = ?2 AND source IS NULL").bind(source, user.id));
+    await env.DB.batch(stmts);
+  } catch (e) { /* tracking tables not migrated yet: ignore */ }
+}
+
+async function setContactOk(request, env, user) {
+  const body = await readJson(request, 1000);
+  if (!body || typeof body.ok !== "boolean") return json({ error: "bad_request" }, 400);
+  await env.DB.prepare("UPDATE users SET contact_ok = ?1 WHERE id = ?2").bind(body.ok ? 1 : 0, user.id).run();
+  return json({ ok: true, contactOk: body.ok });
+}
+
+// The Oct 20 goal: users / activated / returned (admins excluded), visits by link tag, time on site.
+async function launchStats(env) {
+  const OWN_EVENTS = `(SELECT COUNT(*) FROM saved_weeks w, json_each(w.data, '$.events') e
+                        WHERE w.user_id = u.id AND json_extract(e.value, '$.source') <> 'sample')`;
+  const [people, visits] = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT COALESCE(u.source, 'direct') AS source, u.contact_ok AS contact_ok,
+              ${OWN_EVENTS} AS own_events,
+              (SELECT COUNT(*) FROM user_days d WHERE d.user_id = u.id) AS days
+       FROM users u WHERE u.role <> 'admin' AND u.status = 'active'`),
+    env.DB.prepare("SELECT visitor_id, COALESCE(source, 'direct') AS source, seconds FROM visit_days")
+  ]);
+  const rows = people.results || [];
+  const vrows = visits.results || [];
+  const bySource = {};
+  const bucket = (k) => (bySource[k] = bySource[k] || { source: k, visits: 0, browsers: new Set(), users: 0, activated: 0, returned: 0 });
+  rows.forEach((r) => {
+    const b = bucket(r.source);
+    b.users++;
+    if (r.own_events >= 3) b.activated++;
+    if (r.days >= 2) b.returned++;
+  });
+  const perBrowser = {};
+  vrows.forEach((v) => {
+    const b = bucket(v.source);
+    b.visits++;
+    b.browsers.add(v.visitor_id);
+    perBrowser[v.visitor_id] = (perBrowser[v.visitor_id] || 0) + 1;
+  });
+  const timed = vrows.map((v) => v.seconds).filter((n) => n > 0).sort((a, b) => a - b);
+  const median = timed.length ? timed[Math.floor((timed.length - 1) / 2)] : 0;
+  return {
+    users: rows.length,
+    activated: rows.filter((r) => r.own_events >= 3).length,
+    returned: rows.filter((r) => r.days >= 2).length,
+    contactOk: rows.filter((r) => r.contact_ok === 1).length,
+    visits: vrows.length,
+    browsers: Object.keys(perBrowser).length,
+    returningBrowsers: Object.values(perBrowser).filter((n) => n >= 2).length,
+    medianVisitSeconds: median,
+    bySource: Object.values(bySource)
+      .map((b) => ({ source: b.source, visits: b.visits, browsers: b.browsers.size, users: b.users, activated: b.activated, returned: b.returned }))
+      .sort((a, b) => b.users - a.users || b.visits - a.visits)
+  };
+}
+
 function publicUser(user) {
-  return { name: user.name, email: user.email, role: user.role, createdAt: user.createdAt };
+  return { name: user.name, email: user.email, role: user.role, createdAt: user.createdAt, contactOk: user.contactOk === true };
 }
 
 /* ---------- Saved weeks ---------- */
@@ -445,7 +519,10 @@ async function adminOverview(env) {
   ]);
   const first = (r) => ((r.results || [])[0] || {}).n || 0;
   const map = (r) => Object.fromEntries((r.results || []).map((row) => [row.k, row.n]));
+  let launch = null;
+  try { launch = await launchStats(env); } catch (e) { launch = { notReady: true }; } // migration 0003 not run yet
   return json({
+    launch,
     users: { total: first(users), newThisWeek: first(newUsers), activeThisWeek: first(active) },
     feedback: {
       byStatus: map(byStatus),
@@ -464,7 +541,26 @@ async function adminUsers(env) {
             (SELECT COUNT(*) FROM feedback f WHERE f.user_id = u.id) AS feedback_sent
      FROM users u ORDER BY u.created_at DESC LIMIT 500`
   ).all();
-  return json({ users: rows.results || [] });
+  const users = rows.results || [];
+  // Launch columns (need migration 0003); the list still works without them
+  try {
+    const extra = await env.DB.prepare(
+      `SELECT u.email, u.source, u.contact_ok,
+              (SELECT COUNT(*) FROM user_days d WHERE d.user_id = u.id) AS days_active,
+              (SELECT COUNT(*) FROM saved_weeks w, json_each(w.data, '$.events') e
+                 WHERE w.user_id = u.id AND json_extract(e.value, '$.source') <> 'sample') AS own_events
+       FROM users u`
+    ).all();
+    const byEmail = Object.fromEntries((extra.results || []).map((r) => [r.email, r]));
+    users.forEach((u) => {
+      const x = byEmail[u.email] || {};
+      u.source = x.source || null;
+      u.contact_ok = x.contact_ok === 1;
+      u.days_active = x.days_active || 0;
+      u.own_events = x.own_events || 0;
+    });
+  } catch (e) { /* migration 0003 not run yet */ }
+  return json({ users });
 }
 
 // Feedback for the admin inbox. Testers appear only as anonymous account codes (e.g. "T-3fa91"):

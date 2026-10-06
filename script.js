@@ -803,7 +803,7 @@
   const quickAddForm = document.getElementById("quickAddForm");
   const quickAddTitle = document.getElementById("quickAddTitle");
   const quickAddCategory = document.getElementById("quickAddCategory");
-  const quickAddDate = document.getElementById("quickAddDate");
+  const quickAddDayBoxes = document.querySelectorAll('#quickAddDays input[name="quickAddDay"]');
   const quickAddStart = document.getElementById("quickAddStart");
   const quickAddEnd = document.getElementById("quickAddEnd");
   const quickAddStatus = document.getElementById("quickAddStatus");
@@ -820,11 +820,8 @@
     return Number(parts[0]) * 60 + Number(parts[1]);
   }
 
-  if (quickAddDate) {
-    quickAddDate.value = toInputDate(dateForDay(todayIndex));
-    quickAddDate.min = toInputDate(weekStart);
-    quickAddDate.max = toInputDate(dateForDay(6));
-  }
+  // Days: today is picked to start; a class that meets Mon/Wed/Fri is one entry with three days ticked
+  quickAddDayBoxes.forEach(function (box) { box.checked = Number(box.value) === todayIndex; });
 
   if (quickAddForm) {
     quickAddForm.addEventListener("submit", function (e) {
@@ -832,12 +829,10 @@
       var title = quickAddTitle.value.trim();
       if (!title) return;
 
-      var parts = quickAddDate.value.split("-");
-      var dayIndex = parts.length === 3
-        ? dayIndexForDate(new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])))
-        : -1;
-      if (dayIndex === -1) {
-        setStatus(quickAddStatus, "The demo grid shows this week only (" + weekRangeLabel() + ") — pick a date in that range.", "error");
+      var days = [];
+      quickAddDayBoxes.forEach(function (box) { if (box.checked) days.push(Number(box.value)); });
+      if (!days.length) {
+        setStatus(quickAddStatus, "Pick at least one day.", "error");
         return;
       }
 
@@ -846,17 +841,20 @@
       var end = parseTimeInput(quickAddEnd.value);
       if (end != null && end <= start) end = null;
 
-      addWeekEvent({
-        title: title,
-        dayIndex: dayIndex,
-        startMinutes: start,
-        endMinutes: end,
-        category: quickAddCategory.value,
-        source: "manual"
+      days.forEach(function (dayIndex) {
+        addWeekEvent({
+          title: title,
+          dayIndex: dayIndex,
+          startMinutes: start,
+          endMinutes: end,
+          category: quickAddCategory.value,
+          source: "manual"
+        });
       });
       renderAll();
-      setStatus(quickAddStatus, "Added “" + title + "” to " + DAY_NAMES[dayIndex] + ".", "success");
+      setStatus(quickAddStatus, "Added “" + title + "” on " + days.map(function (d) { return DAY_SHORT[d]; }).join(", ") + ".", "success");
       track("event_added");
+      if (days.length > 1) track("repeat_used");
       quickAddTitle.value = "";
       quickAddEnd.value = "";
       quickAddTitle.focus();
@@ -2480,6 +2478,41 @@
     return id;
   })();
 
+  /* ----- Where a visit came from (?from= link tag) + time on site -----
+     Every link shared during the launch carries a tag like ?from=team. The
+     first tag a browser arrives with is remembered, and each day the page
+     reports (anonymously, by browser ID) that tag and roughly how long the
+     page was open and visible, in 60-second steps. No names or emails. */
+  var FROM_KEY = "timewise-from";
+  var fromTag = (function () {
+    var params = new URLSearchParams(window.location.search);
+    var raw = (params.get("from") || "").toLowerCase();
+    var tag = /^[a-z0-9-]{1,24}$/.test(raw) ? raw : null;
+    var stored = null;
+    try { stored = window.localStorage.getItem(FROM_KEY); } catch (e) { /* private mode */ }
+    if (tag && !stored) { try { window.localStorage.setItem(FROM_KEY, tag); } catch (e) { /* ignore */ } }
+    if (params.has("from") && window.history.replaceState) {
+      params.delete("from"); // keep shared links from being re-shared with someone else's tag
+      var query = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (query ? "?" + query : "") + window.location.hash);
+    }
+    return tag || stored || null;
+  })();
+
+  function ping(seconds) {
+    if (window.location.protocol === "file:") return;
+    try {
+      fetch("/api/ping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visitorId: visitorId, from: fromTag, seconds: seconds }),
+        keepalive: true
+      }).catch(function () {});
+    } catch (e) { /* ignore */ }
+  }
+  ping(0);
+  setInterval(function () { if (!document.hidden) ping(60); }, 60000);
+
   function track(event) {
     if (window.location.protocol === "file:" || trackedThisPage[event]) return;
     trackedThisPage[event] = true;
@@ -2652,6 +2685,7 @@
     if (!account.signedIn) {
       var link = document.createElement("a");
       link.className = "nav-signin";
+      link.addEventListener("click", stashUnsavedWeek);
       link.href = signInUrl();
       link.textContent = "Sign in";
       wrap.appendChild(link);
@@ -3022,6 +3056,12 @@
         weekSync.lastSaved = serializeWeek(); // don't save the untouched sample week
         weekSync.enabled = true;
         setWeekSaveStatus("Signed in — changes to your week save automatically.", "success");
+        var stashed = takeStashedWeek();
+        if (stashed && stashed.length) {
+          removeWeekEvents(function (ev) { return ev.source === "sample"; });
+          stashed.forEach(function (saved) { addWeekEvent(saved); });
+          renderAll(); // saves it now that they're signed in
+        }
       }
       setupCopyLastWeek();
     }).catch(function () {
@@ -3146,7 +3186,7 @@
   function initAccounts() {
     if (window.location.protocol === "file:") return Promise.resolve();
     handleSignInReturn();
-    return apiJson("/api/auth/me").then(function (r) {
+    return apiJson("/api/auth/me" + (fromTag ? "?from=" + encodeURIComponent(fromTag) : "")).then(function (r) {
       if (!r.ok || typeof r.body.signedIn !== "boolean") return; // API not available on this host
       account.available = true;
       account.signedIn = r.body.signedIn;
@@ -3155,7 +3195,8 @@
       renderNavAccount();
       addFeedbackButton();
       if (weekGrid) return loadSavedWeek();
-    }).catch(function () { /* stays signed out; the site works as before */ });
+    }).catch(function () { /* stays signed out; the site works as before */ })
+      .then(function () { account.checked = true; });
   }
 
   // For account.html / admin.html (their own scripts wait on this)
@@ -3275,8 +3316,175 @@
     return null;
   }
 
+  /* ----- First-run setup ("Start my week") -----
+     try.html#setup starts with an empty week instead of Maya's sample and walks a
+     new person through three steps: sign in so it saves, add their classes /
+     practice / shifts (or import a calendar), then use Today. It stays until the
+     week has 3+ of their own events, then shows a short "you're set" once. */
+  var SETUP_DONE_KEY = "timewise-setup-done";
+  var setupState = { active: window.location.hash === "#setup", celebrated: false };
+
+  // Anything added before signing in survives the trip to Google and back
+  var PENDING_KEY = "timewise-pending-week";
+  function stashUnsavedWeek() {
+    var own = weekEvents.filter(function (ev) { return ev.source !== "sample"; });
+    if (!own.length) return;
+    try {
+      window.sessionStorage.setItem(PENDING_KEY, JSON.stringify({ weekStart: toInputDate(weekStart), events: JSON.parse(serializeWeek()).filter(function (ev) { return ev.source !== "sample"; }) }));
+    } catch (e) { /* this visit only */ }
+  }
+  function takeStashedWeek() {
+    var data = null;
+    try {
+      data = JSON.parse(window.sessionStorage.getItem(PENDING_KEY) || "null");
+      window.sessionStorage.removeItem(PENDING_KEY);
+    } catch (e) { data = null; }
+    return data && data.weekStart === toInputDate(weekStart) && Array.isArray(data.events) ? data.events : null;
+  }
+
+  function ownEventCount() {
+    return weekEvents.filter(function (ev) { return ev.source !== "sample"; }).length;
+  }
+
+  function clearSampleWeek() {
+    removeWeekEvents(function (ev) { return ev.source === "sample"; });
+    realityState.shown = {};
+    realityState.added = {};
+    realityState.dayIndex = defaultRealityDay();
+    replanState.plan = null;
+  }
+
+  function startSetup() {
+    setupState.active = true;
+    try { window.localStorage.removeItem(SETUP_DONE_KEY); } catch (e) { /* ignore */ }
+    clearSampleWeek();
+    track("setup_started");
+    renderAll();
+    if (window.location.hash !== "#setup" && window.history.replaceState) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search + "#setup");
+    }
+    goTo("setup");
+  }
+
+  function showSampleInstead() {
+    setupState.active = false;
+    if (!weekEvents.some(function (ev) { return ev.source === "sample"; })) loadSampleWeek();
+    renderAll();
+    goTo("today");
+  }
+
+  function setupStep(done, title, body) {
+    var li = el("li", "setup-step" + (done ? " is-done" : ""));
+    li.appendChild(el("span", "setup-check", done ? "✓" : ""));
+    var box = el("div", "setup-step-body");
+    box.appendChild(el("p", "setup-step-title", title));
+    if (body) box.appendChild(body);
+    li.appendChild(box);
+    return li;
+  }
+
+  function renderSetup() {
+    var card = document.getElementById("setup");
+    if (!card) return;
+    var hasSample = weekEvents.some(function (ev) { return ev.source === "sample"; });
+    var own = ownEventCount();
+    var canSignIn = account.available && account.configured;
+    var signedIn = account.signedIn;
+    var complete = own >= 3 && (signedIn || !canSignIn);
+    var dismissed = false;
+    try { dismissed = window.localStorage.getItem(SETUP_DONE_KEY) === "1"; } catch (e) { /* ignore */ }
+
+    card.innerHTML = "";
+    if (hasSample || (complete && (!setupState.active || dismissed))) { card.hidden = true; return; }
+    card.hidden = false;
+
+    if (complete) {
+      card.classList.add("is-complete");
+      card.appendChild(el("h2", "setup-title", "You're set up."));
+      card.appendChild(el("p", "setup-sub", "Check Today each morning, and plan next week on Sunday night. To keep TimeWise one tap away, add it to your home screen: on iPhone, Share → Add to Home Screen; on Android, ⋮ → Add to Home screen."));
+      var ok = el("button", "btn btn-secondary btn-small", "Got it");
+      ok.type = "button";
+      ok.addEventListener("click", function () {
+        try { window.localStorage.setItem(SETUP_DONE_KEY, "1"); } catch (e) { /* ignore */ }
+        setupState.active = false;
+        renderSetup();
+      });
+      card.appendChild(ok);
+      return;
+    }
+
+    card.classList.remove("is-complete");
+    var title = el("h2", "setup-title", "Set up your week");
+    title.id = "setupTitle";
+    card.appendChild(title);
+    card.appendChild(el("p", "setup-sub", "About 5 minutes. You can change anything later."));
+    var steps = el("ol", "setup-steps");
+
+    // 1. Sign in so it saves
+    var s1 = el("div");
+    if (signedIn) {
+      var first = ((account.user && account.user.name) || "").split(" ")[0];
+      s1.appendChild(el("p", "setup-note", "Signed in" + (first ? " as " + first : "") + ". Your week saves automatically."));
+      var opt = el("label", "setup-optin");
+      var box = el("input");
+      box.type = "checkbox";
+      box.id = "setupContactOk";
+      box.checked = !!(account.user && account.user.contactOk);
+      box.addEventListener("change", function () {
+        apiJson("/api/me/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ok: box.checked }) })
+          .then(function (r) { if (r.ok && account.user) account.user.contactOk = box.checked; });
+      });
+      opt.appendChild(box);
+      opt.appendChild(document.createTextNode(" OK if we email you once to ask how it's going"));
+      s1.appendChild(opt);
+    } else if (!account.checked) {
+      s1.appendChild(el("p", "setup-note", "Checking sign-in…"));
+    } else if (canSignIn) {
+      var signin = el("a", "btn btn-primary btn-small", "Sign in with Google");
+      signin.href = signInUrl("/try.html#setup");
+      signin.addEventListener("click", stashUnsavedWeek);
+      s1.appendChild(signin);
+      s1.appendChild(el("p", "setup-note", "So your week is still here tomorrow. We only see your name and email."));
+    } else {
+      s1.appendChild(el("p", "setup-note", "Sign-in isn't available on this copy of the site, so your week won't be saved."));
+    }
+    steps.appendChild(setupStep(signedIn, "Sign in so your week saves", s1));
+
+    // 2. Add the week
+    var s2 = el("div");
+    s2.appendChild(el("p", "setup-note", own ? own + (own === 1 ? " thing" : " things") + " added so far" + (own < 3 ? ". Add a few more: classes, practice, work, meetings." : ".") :
+      "Classes, practice, work shifts, meetings. A class that meets Mon/Wed/Fri is one entry: tick all three days."));
+    var row = el("div", "setup-actions");
+    var add = el("button", "btn btn-secondary btn-small", "Add something");
+    add.type = "button";
+    add.addEventListener("click", function () { focusQuickAdd(); });
+    var imp = el("button", "btn btn-secondary btn-small", "Import a calendar");
+    imp.type = "button";
+    imp.addEventListener("click", function () {
+      var target = document.querySelector(".add-col-import") || document.getElementById("calendars");
+      target.scrollIntoView({ block: "start" });
+    });
+    row.appendChild(add);
+    row.appendChild(imp);
+    s2.appendChild(row);
+    steps.appendChild(setupStep(own >= 3, "Add your week", s2));
+
+    // 3. Use it
+    steps.appendChild(setupStep(false, "Check Today each morning", el("p", "setup-note", "When something runs late, tap I'm running behind and TimeWise fixes the rest of the day.")));
+    card.appendChild(steps);
+
+    var alt = el("p", "setup-alt");
+    alt.appendChild(document.createTextNode("Rather look around first? "));
+    var sample = el("button", "link-btn", "Show Maya's sample week");
+    sample.type = "button";
+    sample.addEventListener("click", showSampleInstead);
+    alt.appendChild(sample);
+    card.appendChild(alt);
+  }
+
   function renderToday() {
     if (!todayEls || !todayEls.list) return;
+    renderSetup();
     var now = nowMinutes();
     var today = dateForDay(todayIndex);
     todayEls.title.textContent = today.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
@@ -3614,8 +3822,15 @@
   if (todayEls.list) {
     var addBtn = document.getElementById("todayAddBtn");
     if (addBtn) addBtn.addEventListener("click", focusQuickAdd);
+    var quietFb = document.getElementById("quietFeedbackBtn");
+    if (quietFb) quietFb.addEventListener("click", function () { if (account.available) openFeedback(); });
     var sampleAdd = document.getElementById("todaySampleAdd");
-    if (sampleAdd) sampleAdd.addEventListener("click", focusQuickAdd);
+    if (sampleAdd) sampleAdd.addEventListener("click", startSetup);
+    // "Start my week" links on this page (header button) start setup right here
+    document.querySelectorAll('a[href="try.html#setup"], a[href="#setup"]').forEach(function (a) {
+      a.addEventListener("click", function (e) { e.preventDefault(); startSetup(); });
+    });
+    window.addEventListener("hashchange", function () { if (window.location.hash === "#setup") startSetup(); });
     var behind = document.getElementById("todayBehindBtn");
     if (behind) behind.addEventListener("click", function (e) { e.preventDefault(); replanDayAndGo(todayIndex); });
     // Keep "now" honest while the page stays open
@@ -3643,14 +3858,15 @@
   // The week grid, Replan, and Plan vs. Reality live on try.html — only start
   // them (and look for real calendar connections) on a page that has them.
   if (weekGrid) {
-    loadSampleWeek();
+    if (!setupState.active) loadSampleWeek();
+    else track("setup_started");
     realityState.dayIndex = defaultRealityDay();
     renderReplanDays();
     resetReplanTime();
     renderAll();
     initGoogle();
     // Load a signed-in user's saved week first, so a Notion auto-connect lands on top of it
-    accountReady.then(checkNotion);
+    accountReady.then(function () { renderToday(); checkNotion(); });
 
     // Arriving from a link like try.html#replan: the grid above just grew, so
     // jump to the section again now that the page has its final height.

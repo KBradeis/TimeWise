@@ -4,8 +4,8 @@ This guide covers the user-testing system added to the TimeWise site: Google sig
 in-site feedback, and an admin dashboard. It explains how it works, how to switch it on in production,
 how to test it, and how to undo it.
 
-> **Status:** live at https://timewise.aydink.workers.dev since 2026-09-30, on the Workers Free plan.
-> Production setup and the live test checklist were completed by the owner (see ACCOUNTS_WORKPLAN.md).
+> **Status:** built and tested locally. **Not deployed yet.** Nothing in Cloudflare or Google has been
+> created or changed. The production steps below are for you to do, one at a time, after you approve them.
 
 ---
 
@@ -81,12 +81,8 @@ If either is missing, the site behaves exactly as before: no Sign in link, no Fe
   just convenience; typing `/admin.html` or calling the API directly still gets refused.
 - **No code ever writes `users.role`.** New accounts are always `user`. There is no `/setup`,
   `/make-admin`, or similar endpoint.
-- **Admins can see:** in the **Testers** tab only, testers' names, emails, sign-up and last-sign-in dates,
-  and counts of saved weeks and feedback. In the **Feedback inbox** and exports, testers appear only as
-  anonymous codes like `T-3fa91`. **Admins can't see:** Google IDs, session tokens, or the contents of
-  anyone's saved week.
-- The admin dashboard's product-insights workspace (problems, experiments, decisions, observations,
-  real vs. test labels) is described in `PRODUCT_LOOP.md`.
+- **Admins can see:** testers' names, emails, sign-up and last-sign-in dates, and counts of saved weeks
+  and feedback. **Admins can't see:** Google IDs, session tokens, or the contents of anyone's saved week.
 
 ---
 
@@ -158,29 +154,29 @@ feature's "sensitive" permission and its test-user list don't restrict who can s
 4. **Audience → Publish app** (to "In production"). With only basic scopes, Google doesn't require
    verification and there's no 100-user cap.
 5. **Clients → Create client → Web application.** Under **Authorized redirect URIs** add exactly:
-   `https://timewise.aydink.workers.dev/api/auth/callback`
+   `https://timewise.<your-subdomain>.workers.dev/api/auth/callback`
 6. Copy the **Client ID** and **Client secret**. Paste them only into Cloudflare (next step), nowhere else.
 
 ### 7.3 Add the two secrets to the Worker
-**Recommended (Terminal, in this folder)** — always stores them as Secrets, which survive deploys:
-```bash
-npx wrangler secret put GOOGLE_AUTH_CLIENT_ID
-npx wrangler secret put GOOGLE_AUTH_CLIENT_SECRET
-npx wrangler secret list        # shows names only, never values
-```
-(Dashboard alternative: Worker **timewise** → Settings → Variables and Secrets → Add, type **Secret** —
-not *Text*; a deploy removes Text variables that aren't in `wrangler.json`.)
-Check: `https://timewise.aydink.workers.dev/api/auth/me` should say `"configured":true`.
+Cloudflare → Workers & Pages → **timewise** → Settings → Variables and Secrets → **Add** (type **Secret**)
+for `GOOGLE_AUTH_CLIENT_ID` and `GOOGLE_AUTH_CLIENT_SECRET`.
 
 ### 7.4 Add the new tables to the live database
 **Option A (Terminal, in this folder):** `npx wrangler d1 migrations apply timewise --remote`
 **Option B (no Terminal):** Cloudflare → Storage & databases → D1 → **timewise** → **Console**, paste the
 contents of `migrations/0001_accounts.sql`, and run it. It only creates tables that don't exist yet.
 
+**Launch tracking (Oct 2026):** also run `migrations/0003_launch_tracking.sql` the same way (Console →
+paste → Run). It adds `user_days` (the days each signed-in user was active), `visit_days` (anonymous
+visits by `?from=` link tag, with minutes on the page), and two columns on `users` (`source`,
+`contact_ok`). Until it runs, the site works normally and the admin Launch scoreboard says it isn't set up.
+
+**Cloudflare Web Analytics (free, optional):** Cloudflare → Analytics & Logs → Web Analytics → Add a site
+→ `timewise.aydink.workers.dev` → copy the token from the snippet and replace
+`YOUR_CLOUDFLARE_WEB_ANALYTICS_TOKEN` in each page's beacon tag. It isn't a secret (it's visible in the page).
+
 ### 7.5 Deploy
 Commit everything in GitHub Desktop and **Push origin** (Cloudflare deploys automatically).
-If the build stays **Queued** for more than a few minutes, cancel it and deploy from Terminal in this
-folder instead: `npx wrangler deploy` (same code, same Worker).
 
 ### 7.6 Make yourself the first admin (owner-controlled, one time)
 1. On the live site, click **Sign in** and sign in with **your own** Google account.

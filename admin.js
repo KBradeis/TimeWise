@@ -53,7 +53,8 @@
     ["event_added", "Added an event by hand"], ["replan_used", "Tried Replan my day"], ["replan_applied", "Applied a replan"],
     ["reflection_viewed", "Saw a reflection"], ["reflection_step_added", "Added a suggested next step"],
     ["quiz_completed", "Finished the practice quiz"], ["waitlist_joined", "Answered the early-access form"], ["feedback_sent", "Sent feedback"],
-    ["week_copied", "Copied last week's plan"], ["colors_customized", "Customized calendar colors"]
+    ["week_copied", "Copied last week's plan"], ["colors_customized", "Customized calendar colors"],
+    ["repeat_used", "Added a repeating class"], ["setup_started", "Started \"Set up my week\""]
   ];
   var label = function (list, key) { var m = list.filter(function (x) { return x[0] === key; })[0]; return m ? m[1] : (key || "—"); };
 
@@ -349,6 +350,7 @@
         (o.excludedTestItems ? " — " + o.excludedTestItems + " test item(s) are stored but excluded." : "."));
       p.appendChild(note);
     }
+    p.appendChild(renderLaunch(ov.launch));
     var k = el("div", "kpis kpis-6");
     k.appendChild(kpi(o.realFeedback, "Real feedback", o.newRealFeedback + " new · " + o.unlinkedRealFeedback + " not linked to a problem"));
     k.appendChild(kpi(o.openProblems, "Open problems", o.investigating + " being investigated / researched"));
@@ -846,6 +848,46 @@
   }
 
   /* ---------- Testers (account management) ---------- */
+  // The Oct 20 goal: 50 users / 25 activated / 10 returned (admins excluded)
+  function renderLaunch(L) {
+    var c = card("Launch scoreboard: goal by Oct 20", "Users = signed in with Google. Activated = saved 3+ of their own events (not Maya's). Returned = active on 2+ different days. Admin accounts are not counted.", "launch");
+    if (!L || L.notReady) {
+      c.appendChild(el("p", "insight-banner", "Launch tracking isn't set up yet: run migrations/0003_launch_tracking.sql in the D1 console (see ACCOUNTS_SETUP.md)."));
+      return c;
+    }
+    var goals = [[L.users, 50, "Users"], [L.activated, 25, "Activated"], [L.returned, 10, "Returned"]];
+    var k = el("div", "kpis launch-kpis");
+    goals.forEach(function (g) {
+      var d = kpi(g[0] + " / " + g[1], g[2], Math.min(100, Math.round(g[0] / g[1] * 100)) + "% of goal");
+      var bar = el("div", "launch-bar");
+      var fill = el("span");
+      fill.style.width = Math.min(100, g[0] / g[1] * 100) + "%";
+      bar.appendChild(fill);
+      d.appendChild(bar);
+      k.appendChild(d);
+    });
+    k.appendChild(kpi(L.contactOk, "OK to email", "said yes to one feedback email"));
+    c.appendChild(k);
+    var mins = Math.round(L.medianVisitSeconds / 60);
+    c.appendChild(el("p", "sub", L.visits + " visits from " + L.browsers + " browser IDs (" + L.returningBrowsers + " came back another day) · typical visit about " +
+      (mins ? mins + " min" : "under a minute") + ". Browser IDs aren't people: one person on two devices counts twice."));
+    if (L.bySource.length) {
+      var wrap = el("div", "table-scroll");
+      var t = el("table");
+      var hr = el("tr");
+      ["Link tag (?from=)", "Visits", "Browser IDs", "Users", "Activated", "Returned"].forEach(function (h) { hr.appendChild(el("th", null, h)); });
+      var thead = el("thead"); thead.appendChild(hr); t.appendChild(thead);
+      var tb = el("tbody");
+      L.bySource.forEach(function (r) {
+        var tr = el("tr");
+        [r.source, r.visits, r.browsers, r.users, r.activated, r.returned].forEach(function (v) { tr.appendChild(el("td", null, String(v))); });
+        tb.appendChild(tr);
+      });
+      t.appendChild(tb); wrap.appendChild(t); c.appendChild(wrap);
+    }
+    return c;
+  }
+
   function renderTesters() {
     var p = panels.testers;
     p.innerHTML = "";
@@ -853,7 +895,7 @@
     var wrap = el("div", "table-scroll");
     var t = el("table");
     var hr = el("tr");
-    ["Name", "Email", "Role", "Status", "Joined", "Last sign-in", "Weeks saved", "Feedback"].forEach(function (h) { hr.appendChild(el("th", null, h)); });
+    ["Name", "Email", "Role", "Status", "Joined", "Came from", "Days active", "Own events", "OK to email", "Weeks saved", "Feedback"].forEach(function (h) { hr.appendChild(el("th", null, h)); });
     var thead = el("thead"); thead.appendChild(hr); t.appendChild(thead);
     var tb = el("tbody");
     t.appendChild(tb); wrap.appendChild(t); c.appendChild(wrap);
@@ -861,7 +903,8 @@
     api("/api/admin/users").then(function (r) {
       (r.body.users || []).forEach(function (u) {
         var tr = el("tr");
-        [u.name || "—", u.email, u.role, u.status, when(u.created_at), when(u.last_login_at), u.weeks_saved, u.feedback_sent].forEach(function (val) { tr.appendChild(el("td", null, String(val))); });
+        [u.name || "—", u.email, u.role, u.status, when(u.created_at), u.source || "direct", u.days_active == null ? "—" : u.days_active,
+          u.own_events == null ? "—" : u.own_events, u.contact_ok ? "Yes" : "No", u.weeks_saved, u.feedback_sent].forEach(function (val) { tr.appendChild(el("td", null, String(val))); });
         tb.appendChild(tr);
       });
     });

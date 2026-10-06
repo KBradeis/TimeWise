@@ -108,7 +108,10 @@ async function signInAs(page, who, from = '/try.html') {
   db.prepare("UPDATE users SET role = 'admin' WHERE email = ?").run('owner@example.com'); // the manual first-admin step
   await O.page.goto(BASE + '/admin.html'); await O.page.waitForSelector('#panel-overview .kpi');
   check('Admin dashboard loads on the Overview tab', (await O.page.textContent('#adminRoot')).includes('Admin dashboard') && await O.page.isVisible('#panel-overview'));
-  check('Overview counts 1 real feedback item', (await O.page.textContent('#panel-overview .kpi')).trim().startsWith('1'));
+  check('Overview counts 1 real feedback item', (await O.page.textContent('#panel-overview .kpis-6 .kpi')).trim().startsWith('1'));
+  const launchText = await O.page.textContent('#launch');
+  console.log('    launch:', launchText.replace(/\s+/g, ' ').slice(0, 260));
+  check('Launch scoreboard counts the 2 testers, not the admin', /2 \/ 50/.test(launchText), launchText.slice(0, 200));
   await O.page.click('#tab-inbox'); await O.page.waitForSelector('#panel-inbox .admin-feedback');
   const item = await O.page.textContent('#panel-inbox .admin-feedback');
   check('Inbox shows an anonymous tester code, not a name or email', /T-[0-9a-f]{5}/.test(item) && !item.includes('Alex') && !item.includes('user.a@'));
@@ -127,7 +130,8 @@ async function signInAs(page, who, from = '/try.html') {
   await O.page.click('text=+ Log an observation');
   await O.page.fill('.insight-obs textarea', 'Watched a tester hover over "Fixed" for ~10 seconds before giving up.');
   await O.page.click('.insight-obs .insight-save button');
-  await O.page.waitForFunction(() => document.querySelector('.insight-obs .admin-save-msg').textContent.includes('Saved'));
+  // Saving reloads the inbox (and re-renders this form), so wait on the stored row, not the message
+  for (let i = 0; i < 40 && db.prepare("SELECT COUNT(*) n FROM feedback WHERE source = 'observation'").get().n === 0; i++) await O.page.waitForTimeout(100);
   check('Admin logs a manual observation', db.prepare("SELECT COUNT(*) n FROM feedback WHERE source = 'observation'").get().n === 1);
 
   // Create a problem

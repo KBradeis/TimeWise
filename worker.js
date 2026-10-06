@@ -17,6 +17,7 @@
 
      POST /api/waitlist           → saves an early-access sign-up + survey answers
      POST /api/track              → counts (anonymously) which demo features a visitor tried
+     POST /api/ping               → anonymous visit + time on site, by ?from= link tag
      GET  /api/waitlist/results   → everything above, for results.html (needs ADMIN_KEY)
 
      /api/auth/*, /api/me/*, /api/feedback, /api/admin/* → server/accounts.js
@@ -229,6 +230,26 @@ async function handleApi(request, env, url) {
       return new Response(null, { status: 204 });
     }
 
+    // Anonymous visit + time-on-site: one row per browser ID per day, its ?from= tag, and
+    // seconds the page was open and visible (the page sends 0 on load, then 60 each minute).
+    case "POST /api/ping": {
+      if (!env.DB) return new Response(null, { status: 204 });
+      const body = await readJson(request);
+      const visitor = body && validVisitor(body.visitorId);
+      const seconds = body && (body.seconds === 0 || body.seconds === 60) ? body.seconds : null;
+      if (!visitor || seconds === null) return json({ error: "bad_request" }, 400);
+      const source = typeof body.from === "string" && /^[a-z0-9-]{1,24}$/.test(body.from) ? body.from : null;
+      try {
+        await env.DB.prepare(
+          `INSERT INTO visit_days (visitor_id, day, source, seconds) VALUES (?1, date('now'), ?2, ?3)
+           ON CONFLICT(visitor_id, day) DO UPDATE SET
+             seconds = MIN(visit_days.seconds + excluded.seconds, 14400),
+             source = COALESCE(visit_days.source, excluded.source)`
+        ).bind(visitor, source, seconds).run();
+      } catch (e) { /* migration 0003 not run yet */ }
+      return new Response(null, { status: 204 });
+    }
+
     case "GET /api/waitlist/results": {
       if (!env.ADMIN_KEY) return json({ error: "no_admin_key" }, 503);
       if (!env.DB) return json({ error: "not_configured" }, 503);
@@ -277,7 +298,8 @@ const SURVEY = {
 const TRACKED_EVENTS = [
   "visit", "event_added", "calendar_google", "calendar_notion", "calendar_ics",
   "replan_used", "replan_applied", "reflection_viewed", "reflection_step_added",
-  "quiz_completed", "waitlist_joined", "feedback_sent", "week_copied", "colors_customized"
+  "quiz_completed", "waitlist_joined", "feedback_sent", "week_copied", "colors_customized",
+  "repeat_used", "setup_started"
 ];
 
 let tablesReady = false;
