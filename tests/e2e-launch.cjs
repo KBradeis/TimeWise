@@ -5,7 +5,7 @@ const { DatabaseSync } = require('node:sqlite');
 const BASE = 'http://localhost:8791';
 let pass = 0, fail = 0; const fails = [];
 const check = (n, ok, x) => { ok ? pass++ : (fail++, fails.push(n + (x !== undefined ? ' → ' + JSON.stringify(x) : ''))); console.log((ok ? '  ✓ ' : '  ✗ ') + n); };
-const db = () => new DatabaseSync('/tmp/tw-local.sqlite');
+const db = () => new DatabaseSync('/tmp/tw-local.sqlite', { timeout: 5000 }); // waits instead of 'database is locked'
 
 async function user(browser, w = 1280, h = 900) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h } });

@@ -523,9 +523,12 @@
   var nextEventId = 1;
 
   function addWeekEvent(data) {
+    // A blank title (e.g. a calendar event named "   ") would make the server
+    // reject the whole saved week, so always give it a real name.
+    var title = String(data.title == null ? "" : data.title).trim().slice(0, 80).trim();
     var ev = {
       id: nextEventId++,
-      title: String(data.title || "Untitled event").slice(0, 80),
+      title: title || "Untitled event",
       dayIndex: data.dayIndex,
       startMinutes: data.startMinutes || 0,
       endMinutes: data.endMinutes == null ? null : Math.min(data.endMinutes, 1439),
@@ -1533,8 +1536,12 @@
     return { target: target, when: when };
   }
 
-  function findFreeSlot(dayIndex, from, to, duration) {
+  // `extraBusy` = blocks not on the grid yet (e.g. earlier picks in the same replan)
+  function findFreeSlot(dayIndex, from, to, duration, extraBusy) {
     var busy = reflectableEvents(dayIndex);
+    if (extraBusy && extraBusy.length) {
+      busy = busy.concat(extraBusy).sort(function (a, b) { return a.startMinutes - b.startMinutes; });
+    }
     var cursor = roundUpTo(from, 15);
     for (var i = 0; i < busy.length; i++) {
       var s = busy[i].startMinutes;
@@ -2193,8 +2200,10 @@
 
     // What doesn't fit today goes to the next day's first free daytime slot
     var nextDay = day < 6 ? day + 1 : -1;
+    var takenNextDay = []; // so two postponed blocks don't land in the same slot
     deferred.forEach(function (item) {
-      var slot = nextDay === -1 ? null : findFreeSlot(nextDay, 540, 1260, Math.min(item.duration, 180));
+      var slot = nextDay === -1 ? null : findFreeSlot(nextDay, 540, 1260, Math.min(item.duration, 180), takenNextDay);
+      if (slot !== null) takenNextDay.push({ startMinutes: slot, endMinutes: slot + Math.min(item.duration, 180), allDay: false });
       rows.push({
         kind: "deferred",
         title: item.title,
@@ -2608,7 +2617,8 @@
           earlySubmit.textContent = "Join early access";
           var messages = {
             not_configured: "Sign-ups aren't switched on for this copy of the site yet.",
-            bad_email: "That email doesn't look quite right — double-check it, or leave it blank."
+            bad_email: "That email doesn't look quite right — double-check it, or leave it blank.",
+            too_many: "Lots of sign-ups from your network right now — please try again in a little while."
           };
           setStatus(earlyStatus, messages[err.message] ||
             (window.location.protocol === "file:" || /status_(404|405)/.test(err.message)

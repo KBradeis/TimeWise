@@ -34,7 +34,7 @@
    in their own browser's cookie, and events are passed straight through.
    ========================================================================== */
 
-import { handleAccountsApi } from "./server/accounts.js";
+import { handleAccountsApi, sameOrigin, allow } from "./server/accounts.js";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
@@ -65,6 +65,22 @@ async function handleApi(request, env, url) {
   if (accountsResponse) return accountsResponse;
 
   const route = request.method + " " + url.pathname;
+
+  // The anonymous counters (early access, feature use, visits) only accept requests
+  // from TimeWise's own pages, and only so many per network per hour, so a script
+  // can't inflate the numbers used as evidence. Limits are generous because many
+  // students on campus Wi-Fi can share one IP address.
+  const COUNTER_LIMITS = { "POST /api/waitlist": [30, 3600], "POST /api/track": [600, 3600], "POST /api/ping": [1200, 3600] };
+  if (COUNTER_LIMITS[route]) {
+    if (!sameOrigin(request, url)) return json({ error: "bad_origin" }, 403);
+    if (env.DB) {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      let ok = true;
+      try { ok = await allow(env.DB, route.split("/").pop() + ":" + ip, COUNTER_LIMITS[route]); } catch (e) { /* table missing: don't block */ }
+      if (!ok) return route === "POST /api/waitlist" ? json({ error: "too_many" }, 429) : new Response(null, { status: 204 });
+    }
+  }
+
   const configured = Boolean(env.NOTION_CLIENT_ID && env.NOTION_CLIENT_SECRET);
 
   switch (route) {

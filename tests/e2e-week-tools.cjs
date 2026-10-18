@@ -128,7 +128,7 @@ const status = (page) => page.textContent('#weekSaveStatus');
   await M.page.screenshot({ path: 'wt-mobile-colors.png' });
 
   console.log('\nTracking');
-  const db = new DatabaseSync('/tmp/tw-local.sqlite');
+  const db = new DatabaseSync('/tmp/tw-local.sqlite', { timeout: 5000 }); // waits instead of 'database is locked'
   const ev = db.prepare("SELECT event, COUNT(*) n FROM events WHERE event IN ('week_copied','colors_customized') GROUP BY event").all();
   const got = Object.fromEntries(ev.map((r) => [r.event, r.n]));
   check('week_copied and colors_customized were counted', got.week_copied >= 1 && got.colors_customized >= 1, got);

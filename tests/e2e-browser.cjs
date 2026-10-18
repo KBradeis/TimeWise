@@ -104,7 +104,7 @@ async function signInAs(page, who, from = '/try.html') {
   const O = await newUser(browser);
   await O.ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE });
   await signInAs(O.page, 'owner', '/');
-  const db = new DatabaseSync('/tmp/tw-local.sqlite');
+  const db = new DatabaseSync('/tmp/tw-local.sqlite', { timeout: 5000 }); // waits instead of 'database is locked'
   db.prepare("UPDATE users SET role = 'admin' WHERE email = ?").run('owner@example.com'); // the manual first-admin step
   await O.page.goto(BASE + '/admin.html'); await O.page.waitForSelector('#panel-overview .kpi');
   check('Admin dashboard loads on the Overview tab', (await O.page.textContent('#adminRoot')).includes('Admin dashboard') && await O.page.isVisible('#panel-overview'));

@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import worker from '../worker.js';
 
 const PORT = 8791, ORIGIN = 'http://localhost:' + PORT, CLIENT_ID = 'local-test-client';
-const db = new DatabaseSync('/tmp/tw-local.sqlite');
+const db = new DatabaseSync('/tmp/tw-local.sqlite', { timeout: 5000 }); // waits instead of 'database is locked'
 db.exec('PRAGMA foreign_keys = ON;');
 for (const m of fs.readdirSync(new URL('../migrations/', import.meta.url)).filter((n) => n.endsWith('.sql')).sort()) db.exec(fs.readFileSync(new URL('../migrations/' + m, import.meta.url), 'utf8'));
 const stmt = (sql, args = []) => ({

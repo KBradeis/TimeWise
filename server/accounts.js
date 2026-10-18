@@ -650,7 +650,7 @@ async function adminUpdateFeedback(request, env, admin, id) {
 
 /* ---------- Rate limiting (fixed window, stored in D1) ---------- */
 
-async function allow(db, key, [max, windowSeconds]) {
+export async function allow(db, key, [max, windowSeconds]) {
   const now = Math.floor(Date.now() / 1000);
   const windowStart = now - (now % windowSeconds);
   const row = await db.prepare(
@@ -676,7 +676,7 @@ function redirect(location) {
   return new Response(null, { status: 302, headers: { Location: location, "Cache-Control": "no-store" } });
 }
 
-function sameOrigin(request, url) {
+export function sameOrigin(request, url) {
   const origin = request.headers.get("Origin");
   if (origin) return origin === url.origin;
   const fetchSite = request.headers.get("Sec-Fetch-Site");
