@@ -1723,6 +1723,19 @@
       });
     }
 
+    // FB-4: name every skipped block, not only the one the insight is about
+    var focusSlip = cascade ? cascade.slip : (slips.length ? s : null);
+    var otherSlips = slips.filter(function (ev) { return ev !== focusSlip; });
+    if (otherSlips.length) {
+      var also = [" Also skipped: "];
+      otherSlips.forEach(function (ev, i) {
+        if (i > 0) also.push(i === otherSlips.length - 1 ? " and " : ", ");
+        also.push({ b: ev.title });
+      });
+      also.push(".");
+      r.insight = r.insight.concat(also);
+    }
+
     r.step = step.parts;
     r.action = step.action;
     return r;
@@ -1832,7 +1845,7 @@
         ". Add a few blocks in Your Week above, then come back to check in.";
       realityList.appendChild(empty);
       realityExampleBtn.hidden = true;
-      realityReflectBtn.disabled = true;
+      updateReflectBtn(day, events);
       return;
     }
     realityExampleBtn.hidden = false;
@@ -1907,7 +1920,17 @@
       realityList.appendChild(li);
     });
 
-    realityReflectBtn.disabled = !events.some(function (ev) { return ev.reality; });
+    updateReflectBtn(day, events);
+  }
+
+  // FB-4: once the reflection is showing it updates live, so the button
+  // says so instead of looking clickable and doing nothing.
+  function updateReflectBtn(day, events) {
+    if (!realityReflectBtn) return;
+    var anyMarked = events.some(function (ev) { return ev.reality; });
+    var live = !!realityState.shown[day] && anyMarked;
+    realityReflectBtn.textContent = live ? "\u2713 Reflection updates as you mark" : "See my reflection";
+    realityReflectBtn.disabled = live || !anyMarked;
   }
 
   function renderRealityResult() {
@@ -2042,6 +2065,7 @@
     realityReflectBtn.addEventListener("click", function () {
       realityState.shown[realityState.dayIndex] = true;
       renderRealityResult();
+      updateReflectBtn(realityState.dayIndex, reflectableEvents(realityState.dayIndex));
       track("reflection_viewed");
       if (window.matchMedia("(max-width: 960px)").matches) {
         realityResult.scrollIntoView({ behavior: "smooth", block: "start" });

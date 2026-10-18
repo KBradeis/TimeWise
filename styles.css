@@ -860,6 +860,25 @@ summary:focus-visible {
   padding-left: 1.3em;
 }
 .ics-help li { margin: 4px 0; }
+.ics-help-app { margin: 12px 0 0; color: var(--text); }
+.ics-help-note { margin: 12px 0 0; }
+.ics-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.ics-or::before,
+.ics-or::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+#importCalendar { scroll-margin-top: 96px; }
+.section-lead a { color: var(--text); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 
 .calendar-events-preview {
   margin-top: 20px;

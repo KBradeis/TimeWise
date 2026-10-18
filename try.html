@@ -132,7 +132,8 @@
       <div class="container">
         <div class="section-head">
           <h2 class="section-title">Your week</h2>
-          <p class="section-lead">Classes, shifts, meetings, and deadlines in one place. Type them in, connect a calendar, or upload a calendar file.</p>
+          <p class="section-lead">Classes, shifts, meetings, and deadlines in one place. Type them in, connect Google Calendar or Notion, or
+            <a href="#importCalendar">import from any calendar app</a> (Apple Calendar, Outlook, Google, Moodle, and more).</p>
         </div>
 
         <!-- Live "this week" grid — fed by the quick-add form, the .ics upload, and the preview connects -->
@@ -221,25 +222,44 @@
             <p class="provider-status-note" id="providerStatusNote" aria-live="polite"></p>
             <p class="calendar-panel-sub provider-unverified-note">
               TimeWise is a student project, so Google shows a <em>"Google hasn't verified this app"</em> screen.
-              Click <strong>Advanced → Go to TimeWise</strong> to continue, or upload a calendar file instead.
+              Click <strong>Advanced → Go to TimeWise</strong> to continue, or import a calendar file below.
             </p>
 
-            <label for="icsFileInput" class="ics-upload-area">
+            <p class="ics-or" aria-hidden="true"><span>or, with any calendar app</span></p>
+            <label for="icsFileInput" class="ics-upload-area" id="importCalendar">
               <span class="ics-upload-text">
-                <strong>Upload a calendar file (.ics)</strong>
-                <small>From Apple Calendar, Outlook, Google Calendar, Moodle, and others. Read in your browser only.</small>
+                <strong>Import from any calendar app</strong>
+                <small>Apple Calendar, Outlook, Google Calendar, Moodle, and others. Choose the calendar file (.ics) you export from it. Read in your browser only.</small>
               </span>
               <input type="file" id="icsFileInput" accept=".ics,text/calendar" />
             </label>
             <p class="ics-status" id="icsStatus" aria-live="polite"></p>
             <details class="ics-help">
-              <summary>How do I get a .ics file from Google Calendar?</summary>
+              <summary>How do I get a calendar file from my app?</summary>
+              <p class="ics-help-app"><strong>Google Calendar</strong></p>
               <ol>
                 <li>On a computer, open <strong>calendar.google.com</strong> → <strong>Settings</strong>.</li>
                 <li>Choose <strong>Import &amp; export</strong> → <strong>Export</strong>. A .zip file downloads.</li>
                 <li>Open the .zip. Each calendar is its own .ics file (your main one is named after your email).</li>
-                <li>Upload that file here. To refresh later, export and upload again.</li>
               </ol>
+              <p class="ics-help-app"><strong>Apple Calendar (Mac)</strong></p>
+              <ol>
+                <li>Click the calendar you want in the sidebar.</li>
+                <li>Choose <strong>File</strong> → <strong>Export</strong> → <strong>Export…</strong> and save the .ics file.</li>
+              </ol>
+              <p class="ics-help-app"><strong>Outlook</strong></p>
+              <ol>
+                <li><strong>Outlook on the web:</strong> Settings → Calendar → Shared calendars → <strong>Publish a calendar</strong>.
+                  Publish it, copy the <strong>ICS</strong> link, and open that link in your browser to download the file.</li>
+                <li><strong>Classic Outlook on Windows:</strong> open your calendar, then <strong>File</strong> → <strong>Save Calendar</strong>.</li>
+              </ol>
+              <p class="ics-help-app"><strong>Moodle</strong></p>
+              <ol>
+                <li>Open the <strong>Calendar</strong> page → <strong>Import or export calendars</strong> → <strong>Export calendar</strong>.</li>
+                <li>Pick the events and time range, then click <strong>Export</strong>.</li>
+              </ol>
+              <p class="ics-help-note">Only on a phone? The iPhone and Android calendar apps can't export a file, so use a computer for this step.
+                To refresh later, export and import again.</p>
             </details>
           </div>
         </div>
