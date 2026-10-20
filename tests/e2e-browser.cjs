@@ -48,6 +48,9 @@ async function signInAs(page, who, from = '/try.html') {
   check('Sign-in notice shown and ?signin removed from URL', (await A.page.textContent('.tw-toast')).includes('signed in') && !A.page.url().includes('signin='));
   await A.page.waitForTimeout(400);
   check('Save status says changes save automatically', (await A.page.textContent('#weekSaveStatus')).includes('save automatically'));
+  check('New signed-in user sees setup with Google first, not Maya\'s sample', await A.page.isVisible('#setup') && await A.page.isVisible('.setup-class-form') && (await A.page.textContent('#setup')).includes('Connect Google Calendar') && !(await A.page.isVisible('#todaySampleNote')));
+  await A.page.click('.setup-alt .link-btn'); // "Show Maya's sample week": look around first
+  await A.page.waitForTimeout(300);
   await A.page.fill('#quickAddTitle', 'Alex secret study block'); await A.page.fill('#quickAddStart', '15:00');
   await A.page.click('.quick-add-submit');
   await A.page.waitForFunction(() => document.getElementById('weekSaveStatus').textContent.includes('Saved'), null, { timeout: 5000 });

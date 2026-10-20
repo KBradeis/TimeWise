@@ -1268,8 +1268,49 @@
       .replace(/\\\\/g, "\\");
   }
 
-  function parseIcsDate(raw) {
+  // Outlook writes Windows zone names instead of IANA ones
+  var WINDOWS_TZ = {
+    "eastern standard time": "America/New_York", "us eastern standard time": "America/Indianapolis",
+    "central standard time": "America/Chicago", "mountain standard time": "America/Denver",
+    "us mountain standard time": "America/Phoenix", "pacific standard time": "America/Los_Angeles",
+    "alaskan standard time": "America/Anchorage", "hawaiian standard time": "Pacific/Honolulu",
+    "atlantic standard time": "America/Halifax", "gmt standard time": "Europe/London",
+    "w. europe standard time": "Europe/Berlin", "romance standard time": "Europe/Paris",
+    "utc": "UTC", "coordinated universal time": "UTC"
+  };
+
+  function resolveTimeZone(tzid) {
+    if (!tzid) return null;
+    var name = String(tzid).replace(/^"|"$/g, "").replace(/^\/+/, "").trim();
+    name = WINDOWS_TZ[name.toLowerCase()] || name;
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: name });
+      return name;
+    } catch (e) {
+      return null; // unknown zone: fall back to the visitor's own time zone
+    }
+  }
+
+  // The instant when the wall-clock time y-m-d h:mi:s happens in time zone `tz`
+  function zonedTimeToDate(y, mo, d, h, mi, s, tz) {
+    var fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit"
+    });
+    function offsetAt(ms) {
+      var p = {};
+      fmt.formatToParts(new Date(ms)).forEach(function (part) { p[part.type] = Number(part.value); });
+      return Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute, p.second) - ms;
+    }
+    var guess = Date.UTC(y, mo, d, h, mi, s);
+    var ms = guess - offsetAt(guess);
+    ms = guess - offsetAt(ms); // second pass settles daylight-saving edges
+    return new Date(ms);
+  }
+
+  function parseIcsDate(raw, tzid) {
     // raw looks like "20260925T140000Z", "20260925T140000", or "20260925"
+    raw = String(raw || "").trim();
     var isUtc = /Z$/.test(raw);
     var datePart = raw.slice(0, 8);
     var year = Number(datePart.slice(0, 4));
@@ -1285,9 +1326,12 @@
     var minute = Number(timePart.slice(2, 4)) || 0;
     var second = Number(timePart.slice(4, 6)) || 0;
 
+    var tz = isUtc ? null : resolveTimeZone(tzid);
     var date = isUtc
       ? new Date(Date.UTC(year, month, day, hour, minute, second))
-      : new Date(year, month, day, hour, minute, second);
+      : tz
+        ? zonedTimeToDate(year, month, day, hour, minute, second, tz)
+        : new Date(year, month, day, hour, minute, second);
 
     return { date: date, allDay: false };
   }
@@ -1309,11 +1353,12 @@
 
     lines.forEach(function (line) {
       if (line === "BEGIN:VEVENT") {
-        current = { title: "Untitled event", start: null, end: null, allDay: false, location: "", rrule: null };
+        current = { title: "Untitled event", start: null, end: null, allDay: false, location: "", rrule: null,
+          uid: "", cancelled: false, exdates: [], recurrenceId: null };
         return;
       }
       if (line === "END:VEVENT") {
-        if (current && current.start) events.push(current);
+        if (current && current.start && !isNaN(current.start)) events.push(current);
         current = null;
         return;
       }
@@ -1324,15 +1369,28 @@
       var propRaw = line.slice(0, colonIndex);
       var value = line.slice(colonIndex + 1);
       var prop = propRaw.split(";")[0].toUpperCase();
+      var tzMatch = /;TZID=("[^"]*"|[^;:]*)/i.exec(propRaw);
+      var tzid = tzMatch ? tzMatch[1] : null;
 
       if (prop === "SUMMARY") {
         current.title = unescapeIcsText(value) || "Untitled event";
       } else if (prop === "DTSTART") {
-        var parsed = parseIcsDate(value);
+        var parsed = parseIcsDate(value, tzid);
         current.start = parsed.date;
         current.allDay = parsed.allDay;
       } else if (prop === "DTEND") {
-        current.end = parseIcsDate(value).date;
+        current.end = parseIcsDate(value, tzid).date;
+      } else if (prop === "UID") {
+        current.uid = value.trim();
+      } else if (prop === "STATUS") {
+        current.cancelled = value.trim().toUpperCase() === "CANCELLED";
+      } else if (prop === "EXDATE") {
+        // Skipped occurrences of a repeating event (holidays, cancelled classes)
+        value.split(",").forEach(function (v) {
+          if (v.trim()) current.exdates.push(parseIcsDate(v, tzid).date);
+        });
+      } else if (prop === "RECURRENCE-ID") {
+        current.recurrenceId = parseIcsDate(value, tzid).date;
       } else if (prop === "RRULE") {
         current.rrule = value;
       } else if (prop === "LOCATION") {
@@ -1340,11 +1398,27 @@
       }
     });
 
+    // A RECURRENCE-ID event replaces one occurrence of a repeating event (a moved or
+    // cancelled class). Hide that occurrence from the repeating event so it isn't shown twice.
+    events.forEach(function (ev) {
+      if (!ev.recurrenceId || isNaN(ev.recurrenceId)) return;
+      events.forEach(function (master) {
+        if (master !== ev && master.rrule && !master.recurrenceId && master.uid && master.uid === ev.uid) {
+          master.exdates.push(ev.recurrenceId);
+        }
+      });
+    });
+
+    events = events.filter(function (ev) { return !ev.cancelled; });
     events.sort(function (a, b) {
       return a.start - b.start;
     });
 
     return events;
+  }
+
+  function sameLocalDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
 
   function parseRrule(value) {
@@ -1389,6 +1463,7 @@
       var occurrence = new Date(day);
       occurrence.setHours(event.start.getHours(), event.start.getMinutes(), 0, 0);
       if (until && occurrence > until) continue;
+      if ((event.exdates || []).some(function (x) { return !isNaN(x) && sameLocalDay(x, occurrence); })) continue;
 
       if (rule.FREQ === "DAILY") {
         var daysBetween = Math.round((day - startDay) / 86400000);
@@ -3095,6 +3170,14 @@
           removeWeekEvents(function (ev) { return ev.source === "sample"; });
           stashed.forEach(function (saved) { addWeekEvent(saved); });
           renderAll(); // saves it now that they're signed in
+        } else if (todayEls && todayEls.list && !setupState.active && !ownEventCount()) {
+          // Signed in but nothing saved for this week: show their own (empty) week and
+          // the setup steps, not Maya's sample. Half of signed-in users stopped here.
+          setupState.active = true;
+          clearSampleWeek();
+          weekSync.lastSaved = serializeWeek();
+          renderAll();
+          track("setup_started");
         }
       }
       setupCopyLastWeek();
@@ -3417,6 +3500,99 @@
     return li;
   }
 
+  // A short "type your classes" form inside the setup card. Built once and reused,
+  // because the card re-renders every minute and after every change.
+  var SETUP_FORM_DAYS = [["Mon", 0], ["Tue", 1], ["Wed", 2], ["Thu", 3], ["Fri", 4]];
+  function setupClassForm() {
+    if (setupState.form) {
+      setupState.form.querySelector(".setup-class-status").textContent = "";
+      return setupState.form;
+    }
+    var wrap = el("details", "setup-classes");
+    wrap.open = true;
+    wrap.appendChild(el("summary", "setup-classes-summary", "Or type your classes (about a minute)"));
+    var form = el("form", "setup-class-form");
+    form.noValidate = true;
+    for (var r = 0; r < 3; r++) {
+      var rowEl = el("fieldset", "setup-class-row");
+      rowEl.appendChild(el("legend", "visually-hidden", "Class " + (r + 1)));
+      var name = el("input", "setup-class-name");
+      name.type = "text";
+      name.maxLength = 60;
+      name.placeholder = ["e.g. BUS 131A", "e.g. PSYC 10A", "e.g. Practice or work shift"][r];
+      name.setAttribute("aria-label", "Class " + (r + 1) + " name");
+      rowEl.appendChild(name);
+      var chips = el("div", "day-chips setup-class-days");
+      SETUP_FORM_DAYS.forEach(function (d) {
+        var lab = el("label");
+        var box = el("input");
+        box.type = "checkbox";
+        box.value = String(d[1]);
+        box.setAttribute("aria-label", "Class " + (r + 1) + " meets " + d[0]);
+        lab.appendChild(box);
+        lab.appendChild(el("span", null, d[0]));
+        chips.appendChild(lab);
+      });
+      rowEl.appendChild(chips);
+      var times = el("div", "setup-class-times");
+      var st = el("input", "setup-class-start");
+      st.type = "time";
+      st.setAttribute("aria-label", "Class " + (r + 1) + " starts");
+      var en = el("input", "setup-class-end");
+      en.type = "time";
+      en.setAttribute("aria-label", "Class " + (r + 1) + " ends");
+      times.appendChild(st);
+      times.appendChild(el("span", "setup-class-to", "to"));
+      times.appendChild(en);
+      rowEl.appendChild(times);
+      form.appendChild(rowEl);
+    }
+    var submit = el("button", "btn btn-secondary btn-small", "Add to my week");
+    submit.type = "submit";
+    form.appendChild(submit);
+    var status = el("p", "setup-class-status");
+    status.setAttribute("aria-live", "polite");
+    form.appendChild(status);
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var added = 0, problems = 0;
+      form.querySelectorAll(".setup-class-row").forEach(function (rowEl) {
+        var nameEl = rowEl.querySelector(".setup-class-name");
+        var title = nameEl.value.trim();
+        var days = [];
+        rowEl.querySelectorAll(".setup-class-days input").forEach(function (b) { if (b.checked) days.push(Number(b.value)); });
+        var start = parseTimeInput(rowEl.querySelector(".setup-class-start").value);
+        var end = parseTimeInput(rowEl.querySelector(".setup-class-end").value);
+        if (!title && !days.length && start == null) return; // empty row
+        if (!title || !days.length || start == null) { problems++; return; }
+        if (end != null && end <= start) end = null;
+        days.forEach(function (d) {
+          addWeekEvent({ title: title, dayIndex: d, startMinutes: start, endMinutes: end, category: guessCategory(title) === "work" ? "work" : "class", source: "manual" });
+        });
+        added++;
+        nameEl.value = "";
+        rowEl.querySelectorAll("input[type=checkbox]").forEach(function (b) { b.checked = false; });
+        rowEl.querySelector(".setup-class-start").value = "";
+        rowEl.querySelector(".setup-class-end").value = "";
+      });
+      if (added) {
+        track("event_added");
+        track("setup_classes_added");
+        renderAll();
+      }
+      // renderAll rebuilds the card, so set the message after it
+      var addedText = added ? "Added " + added + (added === 1 ? " class" : " classes") + " to your week." : "";
+      status.textContent = problems
+        ? (addedText ? addedText + " " : "") + "The rest need a name, at least one day, and a start time."
+        : addedText || "Type at least one class first.";
+      status.className = "setup-class-status" + (problems || !added ? " is-error" : " is-success");
+    });
+    wrap.appendChild(form);
+    setupState.form = wrap;
+    return wrap;
+  }
+
   function renderSetup() {
     var card = document.getElementById("setup");
     if (!card) return;
@@ -3484,23 +3660,35 @@
     }
     steps.appendChild(setupStep(signedIn, "Sign in so your week saves", s1));
 
-    // 2. Add the week
+    // 2. Add the week. Users who connected a calendar stuck around; users who had to
+    // type everything in one by one mostly didn't — so lead with the calendar, and make
+    // typing a few classes one short form right here.
     var s2 = el("div");
-    s2.appendChild(el("p", "setup-note", own ? own + (own === 1 ? " thing" : " things") + " added so far" + (own < 3 ? ". Add a few more: classes, practice, work, meetings." : ".") :
-      "Classes, practice, work shifts, meetings. A class that meets Mon/Wed/Fri is one entry: tick all three days."));
-    var row = el("div", "setup-actions");
-    var add = el("button", "btn btn-secondary btn-small", "Add something");
-    add.type = "button";
-    add.addEventListener("click", function () { focusQuickAdd(); });
-    var imp = el("button", "btn btn-secondary btn-small", "Import a calendar");
-    imp.type = "button";
-    imp.addEventListener("click", function () {
-      var target = document.querySelector(".add-col-import") || document.getElementById("calendars");
-      target.scrollIntoView({ block: "start" });
-    });
-    row.appendChild(add);
-    row.appendChild(imp);
-    s2.appendChild(row);
+    s2.appendChild(el("p", "setup-note", own
+      ? own + (own === 1 ? " thing" : " things") + " added so far" + (own < 3 ? ". Add a couple more so Today and Replan have something to work with." : ".")
+      : "The fastest way: bring in the calendar you already use."));
+    if (own < 3) {
+      var row = el("div", "setup-actions");
+      var gBtn = document.querySelector('.provider-btn[data-provider="google"]');
+      if (gBtn) {
+        var g = el("button", "btn btn-primary btn-small", "Connect Google Calendar");
+        g.type = "button";
+        g.addEventListener("click", function () { track("setup_google_clicked"); gBtn.click(); });
+        row.appendChild(g);
+      }
+      var imp = el("button", "btn btn-secondary btn-small", "Import a calendar file");
+      imp.type = "button";
+      imp.addEventListener("click", function () {
+        var target = document.getElementById("importCalendar") || document.getElementById("calendars");
+        target.scrollIntoView({ block: "center" });
+      });
+      row.appendChild(imp);
+      s2.appendChild(row);
+      if (gBtn) {
+        s2.appendChild(el("p", "setup-hint", "Google will warn that it hasn't verified this student project. Click Advanced → Go to TimeWise. It's read-only."));
+      }
+      s2.appendChild(setupClassForm());
+    }
     steps.appendChild(setupStep(own >= 3, "Add your week", s2));
 
     // 3. Use it

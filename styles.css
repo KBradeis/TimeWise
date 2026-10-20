@@ -4150,3 +4150,28 @@ section[id] {
   .day-chips span { font-size: 0.85rem; }
   .setup-card { padding: 16px; }
 }
+
+/* Setup: Google-first + "type your classes" form */
+.setup-hint { color: var(--ink-2); font-size: 0.82rem; margin: 6px 0 0; }
+.setup-classes { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+.setup-classes-summary { cursor: pointer; font-weight: 700; font-size: 0.93rem; }
+.setup-class-form { display: grid; gap: 12px; margin-top: 10px; }
+.setup-class-row { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; min-width: 0; }
+.setup-class-name, .setup-class-times input {
+  font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg); color: var(--ink); min-width: 0;
+}
+.setup-class-name { width: 100%; max-width: 460px; }
+.setup-class-days { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 330px; }
+.setup-class-times { display: flex; align-items: center; gap: 6px; max-width: 380px; }
+.setup-class-times input { flex: 1 1 0; width: 0; min-width: 0; padding: 8px; }
+@media (max-width: 480px) {
+  /* room for "02:00 PM" on phones; tapping the field still opens the time picker */
+  .setup-class-times input::-webkit-calendar-picker-indicator { display: none; }
+}
+.setup-class-to { color: var(--ink-2); font-size: 0.9rem; }
+.setup-class-form .btn { justify-self: start; }
+.setup-class-status { margin: 0; font-size: 0.9rem; min-height: 1.2em; }
+.setup-class-status.is-error { color: #c0356c; }
+.setup-class-status.is-success { color: var(--green-dark); }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
