@@ -81,6 +81,10 @@
             <a href="try.html" class="btn btn-secondary btn-large">See a sample week</a>
           </div>
           <p class="home-hero-note">Free. About 5 minutes to set up. Sign in with Google so your week saves.</p>
+          <button type="button" class="home-video-btn" id="howToVideoBtn" aria-haspopup="dialog">
+            <span class="home-video-play" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg></span>
+            See how it works <span class="home-video-len">1:25</span>
+          </button>
         </div>
 
         <figure class="home-shot">
@@ -216,6 +220,21 @@
 
   </main>
 
+  <!-- How-to video (Oct 2026): plays only when opened; captions are in the picture, plus a .vtt track -->
+  <dialog class="video-dialog" id="howToVideoDialog" aria-labelledby="howToVideoTitle">
+    <button type="button" class="feedback-close" id="howToVideoClose" aria-label="Close video">&times;</button>
+    <h2 id="howToVideoTitle">How to use TimeWise</h2>
+    <video id="howToVideo" controls playsinline preload="none" poster="assets/video/timewise-how-to-poster.jpg">
+      <source src="assets/video/timewise-how-to.mp4" type="video/mp4" />
+      <track kind="captions" src="assets/video/timewise-how-to.vtt" srclang="en" label="English" />
+      Your browser can't play this video. <a href="assets/video/timewise-how-to.mp4">Download it</a> instead.
+    </video>
+    <div class="video-dialog-cta">
+      <p>Ready to try it on your own week?</p>
+      <a href="try.html#setup" class="btn btn-primary">Start my week</a>
+    </div>
+  </dialog>
+
   <!-- ============ FOOTER ============ -->
   <footer class="site-footer">
     <div class="container footer-grid">
@@ -240,6 +259,25 @@
   </footer>
 
   <script src="script.js"></script>
+  <script>
+    (function () {
+      var btn = document.getElementById("howToVideoBtn");
+      var dlg = document.getElementById("howToVideoDialog");
+      var vid = document.getElementById("howToVideo");
+      if (!btn || !dlg || !vid || typeof dlg.showModal !== "function") {
+        if (btn) btn.addEventListener("click", function () { window.location.href = "assets/video/timewise-how-to.mp4"; });
+        return;
+      }
+      btn.addEventListener("click", function () {
+        dlg.showModal();
+        var p = vid.play();
+        if (p && p.catch) p.catch(function () { /* the person can press play */ });
+      });
+      document.getElementById("howToVideoClose").addEventListener("click", function () { dlg.close(); });
+      dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); }); // click outside
+      dlg.addEventListener("close", function () { vid.pause(); btn.focus(); });
+    })();
+  </script>
 
   <!--
     Cloudflare Web Analytics — free, cookie-free page-view tracking (no consent
