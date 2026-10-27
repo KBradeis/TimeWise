@@ -1,0 +1,21 @@
+Event name,Business meaning,Exact trigger,Entity,Required properties,Source of truth,Deduplication,Validation,Privacy note,Owner,Status
+visit,A browser loaded a page of the site,script.js track("visit") on page load (~line 4100),browser (random ID in localStorage),visitorId,D1 events table,"PRIMARY KEY (visitor_id, event): once per browser ever",worker.js TRACKED_EVENTS allowlist + validVisitor + same-origin + IP rate limit,No names/emails/IPs stored,Owner,Observed in repository
+setup_started,Browser opened the first-run setup,script.js startSetup line 3474 and line 3180,browser,visitorId,D1 events,once per browser,allowlist,Anonymous,Owner,Observed in repository
+setup_classes_added,Typed at least one class in the setup form,script.js line 3581 after a successful add,browser,visitorId,D1 events,once per browser,"NOT in worker.js TRACKED_EVENTS, so the server rejects it with 400 and nothing is stored",Anonymous,Owner,Observed in repository; broken (fix TW-01)
+setup_google_clicked,Clicked Connect Google Calendar inside setup,script.js line 3676,browser,visitorId,D1 events,once per browser,"NOT in TRACKED_EVENTS, so it is rejected",Anonymous,Owner,Observed in repository; broken (fix TW-01)
+event_added,Added an event by hand,script.js line 859,browser,visitorId,D1 events,once per browser,allowlist,Anonymous,Owner,Observed in repository
+repeat_used,Added a repeating event,script.js line 860,browser,visitorId,D1 events,once per browser,allowlist,Anonymous,Owner,Observed in repository
+calendar_google / calendar_notion / calendar_ics,Brought in events from a calendar source,"script.js line 969 track(""calendar_"" + source)",browser,visitorId,D1 events,once per browser per source,allowlist,Anonymous,Owner,Observed in repository
+replan_used,Generated a replan (attempt),script.js line 2528,browser,visitorId,D1 events,once per browser,allowlist,Anonymous,Owner,Observed in repository
+replan_applied,Applied a replan to the week (outcome),script.js line 2504,browser,visitorId,D1 events,once per browser,allowlist,Anonymous,Owner,Observed in repository
+reflection_viewed,Saw a Look back reflection,script.js line 2151,browser,visitorId,D1 events,once per browser,allowlist,Anonymous,Owner,Observed in repository
+reflection_step_added,Added the suggested next step to the week,script.js line 2131,browser,visitorId,D1 events,once per browser,allowlist,Anonymous,Owner,Observed in repository
+quiz_completed,Finished a Practice session,script.js line 377,browser,visitorId,D1 events,once per browser,allowlist,Anonymous,Owner,Observed in repository
+week_copied,Copied last week,script.js line 3278,browser,visitorId,D1 events,once per browser,allowlist,Anonymous,Owner,Observed in repository
+colors_customized,Changed category colors,script.js line 770,browser,visitorId,D1 events,once per browser,allowlist,Anonymous,Owner,Observed in repository
+feedback_sent,Feedback stored successfully (outcome),script.js line 3079 (renderFeedbackThanks runs only after the server returns ok),browser,visitorId,D1 events,once per browser,allowlist,Anonymous; message itself is in the feedback table,Owner,Observed in repository
+waitlist_joined,Submitted the early-access form,worker.js /api/waitlist,browser,visitorId,D1 events + signups,once per browser,allowlist,Email optional and stored only in signups,Owner,Observed in repository
+video_opened,Opened the how-to video dialog (attempt to watch),Proposed: click on #howToVideoBtn in index.html,browser,visitorId,D1 events,once per browser,add to TRACKED_EVENTS,Anonymous; add one line to privacy.html,Owner,Planned (TW-06; needs approval)
+video_half,Watched at least 50% of the video,Proposed: video timeupdate when currentTime >= duration/2,browser,visitorId,D1 events,once per browser,add to TRACKED_EVENTS,Anonymous,Owner,Planned (TW-06; needs approval)
+video_completed,Reached the end of the video,Proposed: video 'ended' event,browser,visitorId,D1 events,once per browser,add to TRACKED_EVENTS,Anonymous,Owner,Planned (TW-06; needs approval)
+video_cta_clicked,Clicked Start my week under the video,Proposed: click on .video-dialog-cta a,browser,visitorId,D1 events,once per browser,add to TRACKED_EVENTS,Anonymous,Owner,Planned (TW-06; needs approval)
