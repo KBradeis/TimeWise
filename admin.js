@@ -21,8 +21,9 @@
 
   var UNKNOWN = "Unknown / Not enough evidence";
   var CATEGORY = [["worked_well", "👍 Worked well"], ["confusing", "🤔 Confusing"], ["broken", "🐞 Didn't work"], ["idea", "💡 Idea"]];
-  var FEATURE = [["home", "Home"], ["the_idea", "The Idea"], ["your_week", "Your week"], ["calendars", "Calendars"], ["replan", "Replan"],
-    ["reflect", "Plan vs. Reality"], ["practice", "Practice"], ["early_access", "Early access"], ["account", "My account"], ["other", "Other"]];
+  var FEATURE = [["home", "Home"], ["how_to_video", "How-to video"], ["the_idea", "Why TimeWise"], ["setup", "Setup"], ["today", "Today"],
+    ["your_week", "Week"], ["calendars", "Calendars"], ["replan", "Replan"], ["reflect", "Look back"], ["practice", "Practice"],
+    ["early_access", "Early access"], ["account", "My account"], ["other", "Other"]];
   var FB_STATUS = [["new", "New"], ["reviewing", "Reviewing"], ["resolved", "Resolved"]];
   var SOURCE = [["real", "Real tester feedback"], ["observation", "Manual observation"], ["test", "Test data"], ["automated", "Automated test"]];
   var SOURCE_SHORT = { real: "Real", observation: "Observation", test: "Test", automated: "Automated" };
@@ -33,7 +34,8 @@
   // Best guess when an admin hasn't set a stage — always labeled "inferred"
   var STAGE_FROM_FEATURE = { home: "first_impression", the_idea: "first_impression", early_access: "first_impression",
     your_week: "creating_schedule", calendars: "adding_commitments", replan: "adjusting_plans", reflect: "reviewing_progress",
-    account: "returning", practice: "other", other: "other" };
+    account: "returning", practice: "other", other: "other",
+    how_to_video: "first_impression", setup: "creating_schedule", today: "planning" };
   var STATUS = [
     ["new", "New", "Logged; nobody has reviewed the evidence yet."],
     ["investigating", "Investigating", "Actively reviewing the feedback and evidence."],
@@ -54,7 +56,10 @@
     ["reflection_viewed", "Saw a reflection"], ["reflection_step_added", "Added a suggested next step"],
     ["quiz_completed", "Finished the practice quiz"], ["waitlist_joined", "Answered the early-access form"], ["feedback_sent", "Sent feedback"],
     ["week_copied", "Copied last week's plan"], ["colors_customized", "Customized calendar colors"],
-    ["repeat_used", "Added a repeating class"], ["setup_started", "Started \"Set up my week\""]
+    ["repeat_used", "Added a repeating class"], ["setup_started", "Started \"Set up my week\""],
+    ["setup_classes_added", "Typed classes in setup"], ["setup_google_clicked", "Clicked Connect Google in setup"],
+    ["video_opened", "Opened the how-to video"], ["video_half", "Watched half the video"],
+    ["video_completed", "Watched the whole video"], ["video_cta_clicked", "Clicked Start my week under the video"]
   ];
   var label = function (list, key) { var m = list.filter(function (x) { return x[0] === key; })[0]; return m ? m[1] : (key || "—"); };
 

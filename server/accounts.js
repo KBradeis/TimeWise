@@ -41,7 +41,7 @@ const SESSION_DAYS = 30;
 const DAY = 86400;
 
 const FEEDBACK_CATEGORIES = ["worked_well", "confusing", "broken", "idea"];
-const FEEDBACK_FEATURES = ["home", "the_idea", "your_week", "calendars", "replan", "reflect", "practice", "early_access", "account", "other"];
+const FEEDBACK_FEATURES = ["home", "the_idea", "today", "setup", "your_week", "calendars", "replan", "reflect", "practice", "how_to_video", "early_access", "account", "other"];
 const FEEDBACK_STATUSES = ["new", "reviewing", "resolved"];
 
 // Limits per fixed window: [max requests, window in seconds]

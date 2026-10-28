@@ -68,7 +68,7 @@ async function signInAs(page, who, from = '/try.html') {
   // Feedback
   await A.page.click('.feedback-fab');
   await A.page.click('.feedback-types label:nth-of-type(2)');
-  check('Feedback page auto-selects the right part of the site', (await A.page.$eval('.feedback-dialog select', (s) => s.value)) === 'your_week');
+  check('Feedback page auto-selects the right part of the site', (await A.page.$eval('.feedback-dialog select', (s) => s.value)) === 'today'); // Try it opens on Today
   await A.page.fill('.feedback-dialog textarea', 'I wasn\'t sure what "fixed" meant on the Replan blocks.');
   await A.page.click('.feedback-rating label:nth-of-type(4)');
   await A.page.screenshot({ path: 'acc-feedback-form.png' });

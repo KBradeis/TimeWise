@@ -11,10 +11,16 @@ Every ticket below is **$0**, uses the existing stack, and adds no third-party s
 | TW-00 | How-to video + dialog on home ([index.html](../../index.html) lines 84, 224, 264; [styles.css](../../styles.css) end of file; `assets/video/`) | Owner-approved and live 2026-10-27 |
 | TW-00a | Overlapping caption cues fixed in `assets/video/timewise-how-to.vtt` (no visible change; the burned-in captions were unaffected) | Minor correction, same behavior; included with this docs commit |
 | TW-00b | `docs` added to [.assetsignore](../../.assetsignore) so these internal docs and CSVs are not served publicly | Routine; keeps current public behavior |
+| TW-01 | Setup events `setup_classes_added`, `setup_google_clicked` added to worker.js `TRACKED_EVENTS` | Owner-approved 2026-10-28 (first release) |
+| TW-02 | "Was this video clear? Tell us what was confusing" under the player; closes the video and opens the existing feedback form with "How-to video" preselected; only shown where feedback works | Owner-approved 2026-10-28 |
+| TW-03 | Feedback "part of the site" list relabeled (Why TimeWise, Week, Look back, Replan) and extended (Today, Setting up my week, How-to video); stored keys unchanged; default on Try it is now Today; admin.js labels updated | Owner-approved 2026-10-28 (emoji left as is: not part of the approval) |
+| TW-06 | `video_opened`, `video_half`, `video_completed`, `video_cta_clicked` (once per browser), privacy.html sentence + date, admin.js and results.html labels | Owner-approved 2026-10-28 |
+
+First-release tests (2026-10-28, local test server): `accounts.test.mjs` 99/99, `insights.test.mjs` 51/51, `e2e-browser` 59/59 (one expectation updated: Try it now defaults feedback to Today), `e2e-today` 32/32, `e2e-week-tools` 29/29 on a fresh test database, `e2e-reality-merge` 16/16, new [`e2e-video-feedback`](../../tests/e2e-video-feedback.cjs) 21/21. `e2e-launch` fails its first check ("visit counted with its source") and then times out; it fails the same way on the code before this release, so it is an existing test issue, not caused by these changes.
 
 ## Proposed tickets
 
-### TW-01 · P1 · Record the two setup events the client already sends
+### TW-01 · P1 · Record the two setup events the client already sends · **Shipped in first release**
 - **Problem/evidence:** script.js line 3581 sends `setup_classes_added` and line 3676 sends `setup_google_clicked`. Neither is in worker.js `TRACKED_EVENTS` (line 314), so `/api/track` returns 400 (line 243) and the data is lost.
 - **Change:** add both names to `TRACKED_EVENTS`.
 - **Files:** worker.js. **Reuse:** existing allowlist.
@@ -22,14 +28,14 @@ Every ticket below is **$0**, uses the existing stack, and adds no third-party s
 - **Acceptance:** with the local server, both calls return 204 and rows appear in the `events` table; `node tests/accounts.test.mjs` still passes.
 - **Effort:** 10 min. **Risk:** very low. **Metric:** setup funnel becomes visible.
 
-### TW-02 · P1 · Feedback link inside the video dialog
+### TW-02 · P1 · Feedback link inside the video dialog · **Shipped in first release**
 - **Problem:** no feedback route near the tutorial.
 - **Change:** under the player, add the line "Was this video clear? Tell us what was confusing." as a button that closes the video and opens the existing feedback dialog (`openFeedback`) with a new "How-to video" option preselected.
 - **Files:** index.html (dialog markup + inline script); script.js (`FEEDBACK_FEATURES` line 2716, expose `openFeedback(feature)`); server/accounts.js `FEEDBACK_FEATURES` line 44 (add `how_to_video`). No schema change: the `feature` column has no CHECK constraint (migrations/0001_accounts.sql line 67).
 - **Acceptance:** keyboard-reachable, at least 40 px tall; signed-out users get the existing sign-in prompt (or TW-04's form, if approved); the stored row has `feature = 'how_to_video'`.
 - **Effort:** 1–2 h. **Risk:** low.
 
-### TW-03 · P1 · Update "Which part of the site?" options
+### TW-03 · P1 · Update "Which part of the site?" options · **Shipped in first release** (emoji question still open)
 - **Problem:** labels don't match the site (The Idea page → Why TimeWise; Your week → Week; Plan vs. Reality → Look back), and Today, Setup and How-to video are missing.
 - **Change:** relabel; add `today`, `setup`, `how_to_video`; keep old values valid on the server so existing rows still display. Optional: remove the emoji from the type choices (owner's call).
 - **Files:** script.js line 2716; server/accounts.js line 44; admin.js labels if hard-coded.
@@ -48,7 +54,7 @@ Every ticket below is **$0**, uses the existing stack, and adds no third-party s
 - **Files:** `migrations/0004_feedback_questions.sql` (proposed); server/accounts.js `submitFeedback`; script.js `renderFeedbackForm`; admin.js inbox columns.
 - **Effort:** 3–4 h. **Risk:** low–medium (migration run by the owner in the D1 console).
 
-### TW-06 · P2 · Video engagement events (**new data collection**)
+### TW-06 · P2 · Video engagement events (**new data collection**) · **Shipped in first release**
 - **Change:** `video_opened`, `video_half`, `video_completed`, `video_cta_clicked` (see [data/event_dictionary.csv](data/event_dictionary.csv)); add to `TRACKED_EVENTS`; one sentence on privacy.html.
 - **Files:** index.html inline script (call the global `track` if exposed, or post to `/api/track` directly); worker.js line 314; privacy.html.
 - **Acceptance:** each fires at most once per browser at the exact trigger; no event fires on page load.

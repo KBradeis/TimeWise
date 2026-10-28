@@ -4236,6 +4236,19 @@ section[id] {
   margin-top: 14px;
 }
 .video-dialog-cta p { margin: 0; color: var(--ink-2); }
+.video-dialog-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 6px;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  font-size: 0.95rem;
+  color: var(--ink-2);
+}
+.video-dialog-feedback[hidden] { display: none; }
+.video-dialog-feedback .link-btn { min-height: 40px; }
 @media (max-width: 600px) {
   .video-dialog { padding: 16px 12px 14px; }
   .video-dialog-cta .btn { width: 100%; }

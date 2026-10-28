@@ -18,7 +18,7 @@ Capacity (Owner-confirmed earlier in October): about 40 minutes a day through th
 ## Dependency-ordered actions
 
 1. **Now (done 2026-10-27):** video live; docs written; docs kept off the public site; caption timing fix. This commit is waiting for the owner to push.
-2. **After D1–D3 (about 3 h of build, by Claude in the repo):** TW-01, TW-06, TW-02, TW-03 in one small release, then run tests and push.
+2. **Done 2026-10-28 (D1–D3 approved):** TW-01, TW-06, TW-02, TW-03 built and tested in one small release; live once the owner pushes.
 3. **Same week:** explain-back test with 3–5 students (owner, about 1 h total); log the answers as Observations.
 4. **After D4:** TW-04, then a privacy page update, then release.
 5. **Day 14 after step 2:** compare against the baseline in [MEASUREMENT_PLAN.md](MEASUREMENT_PLAN.md); update [data/feedback_opportunities.csv](data/feedback_opportunities.csv); send close-the-loop notes the owner approves.

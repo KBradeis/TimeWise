@@ -315,7 +315,8 @@ const TRACKED_EVENTS = [
   "visit", "event_added", "calendar_google", "calendar_notion", "calendar_ics",
   "replan_used", "replan_applied", "reflection_viewed", "reflection_step_added",
   "quiz_completed", "waitlist_joined", "feedback_sent", "week_copied", "colors_customized",
-  "repeat_used", "setup_started"
+  "repeat_used", "setup_started", "setup_classes_added", "setup_google_clicked",
+  "video_opened", "video_half", "video_completed", "video_cta_clicked"
 ];
 
 let tablesReady = false;

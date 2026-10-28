@@ -2713,10 +2713,12 @@
   var account = { available: false, signedIn: false, configured: false, user: null };
   var weekSync = { enabled: false, timer: null, lastSaved: null, statusEl: null };
 
+  // Stored keys stay the same so older feedback still reads correctly; labels match today's site
   var FEEDBACK_FEATURES = [
-    ["home", "Home page"], ["the_idea", "The Idea page"], ["your_week", "Your week"],
-    ["calendars", "Connecting a calendar"], ["replan", "Replan my day"], ["reflect", "Plan vs. Reality"],
-    ["practice", "Practice quiz"], ["early_access", "Early access form"], ["account", "My account"], ["other", "Something else"]
+    ["home", "Home page"], ["how_to_video", "How-to video"], ["the_idea", "Why TimeWise"],
+    ["setup", "Setting up my week"], ["today", "Today"], ["your_week", "Week"],
+    ["calendars", "Connecting a calendar"], ["replan", "Replan (running behind)"], ["reflect", "Look back"],
+    ["practice", "Practice"], ["early_access", "Early access form"], ["account", "My account"], ["other", "Something else"]
   ];
   var FEEDBACK_CATEGORIES = [
     ["worked_well", "👍", "Something worked well", "What did you like? What made it work for you?"],
@@ -2741,7 +2743,7 @@
   }
 
   function defaultFeature() {
-    return { "/": "home", "/about": "the_idea", "/try": "your_week", "/practice": "practice", "/account": "account" }[pageKey()] || "other";
+    return { "/": "home", "/about": "the_idea", "/try": "today", "/practice": "practice", "/account": "account" }[pageKey()] || "other";
   }
 
   function signInUrl(returnPath) {
@@ -2950,7 +2952,7 @@
       o.textContent = f[1];
       select.appendChild(o);
     });
-    select.value = defaultFeature();
+    select.value = feedbackFeature || defaultFeature();
     featureLabel.appendChild(featureText);
     featureLabel.appendChild(select);
     form.appendChild(featureLabel);
@@ -3079,7 +3081,9 @@
     track("feedback_sent");
   }
 
-  function openFeedback() {
+  var feedbackFeature = null; // set when another part of the page opens feedback about something specific
+  function openFeedback(feature) {
+    feedbackFeature = FEEDBACK_FEATURES.some(function (f) { return f[0] === feature; }) ? feature : null;
     if (!feedbackDialog) feedbackDialog = buildFeedbackDialog();
     var body = feedbackDialog.querySelector(".feedback-body");
     if (account.signedIn) renderFeedbackForm(body); else renderFeedbackSignedOut(body);
@@ -3320,7 +3324,9 @@
   var accountReady = initAccounts();
   window.TimeWise = {
     ready: accountReady.then(function () { return account; }),
-    openFeedback: function () { if (account.available) openFeedback(); },
+    openFeedback: function (feature) { if (account.available) openFeedback(feature); },
+    canSendFeedback: function () { return account.available && (account.signedIn || account.configured); },
+    track: track,
     signInUrl: signInUrl,
     signOut: signOut
   };

@@ -231,8 +231,12 @@
     </video>
     <div class="video-dialog-cta">
       <p>Ready to try it on your own week?</p>
-      <a href="try.html#setup" class="btn btn-primary">Start my week</a>
+      <a href="try.html#setup" class="btn btn-primary" id="howToVideoCta">Start my week</a>
     </div>
+    <p class="video-dialog-feedback" id="howToVideoFeedback" hidden>
+      Was this video clear?
+      <button type="button" class="link-btn" id="howToVideoFeedbackBtn">Tell us what was confusing</button>
+    </p>
   </dialog>
 
   <!-- ============ FOOTER ============ -->
@@ -268,14 +272,36 @@
         if (btn) btn.addEventListener("click", function () { window.location.href = "assets/video/timewise-how-to.mp4"; });
         return;
       }
+      var tw = window.TimeWise || {};
+      // Anonymous, once per browser, same as the site's other feature counts (see privacy.html)
+      function count(name) { if (typeof tw.track === "function") tw.track(name); }
       btn.addEventListener("click", function () {
         dlg.showModal();
+        count("video_opened");
         var p = vid.play();
         if (p && p.catch) p.catch(function () { /* the person can press play */ });
       });
+      vid.addEventListener("timeupdate", function () {
+        if (vid.duration && vid.currentTime >= vid.duration / 2) count("video_half");
+      });
+      vid.addEventListener("ended", function () { count("video_completed"); });
+      document.getElementById("howToVideoCta").addEventListener("click", function () { count("video_cta_clicked"); });
       document.getElementById("howToVideoClose").addEventListener("click", function () { dlg.close(); });
       dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); }); // click outside
-      dlg.addEventListener("close", function () { vid.pause(); btn.focus(); });
+      var toFeedback = false;
+      dlg.addEventListener("close", function () {
+        vid.pause();
+        if (toFeedback) { toFeedback = false; tw.openFeedback("how_to_video"); } else { btn.focus(); }
+      });
+      // "Was this video clear?" uses the site's existing feedback form, shown only where feedback works
+      var fbLine = document.getElementById("howToVideoFeedback");
+      if (tw.ready && typeof tw.canSendFeedback === "function") {
+        tw.ready.then(function () { if (tw.canSendFeedback()) fbLine.hidden = false; });
+      }
+      document.getElementById("howToVideoFeedbackBtn").addEventListener("click", function () {
+        toFeedback = true;
+        dlg.close();
+      });
     })();
   </script>
 
