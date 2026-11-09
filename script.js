@@ -940,6 +940,12 @@
      arrives, Maya's sample week is cleared so visitors see only their own
      schedule. Items: { title, start: Date, end: Date|null, allDay } */
   function replaceWithRealEvents(source, items) {
+    // Results the student marked in TimeWise survive a refresh (matched by
+    // title, day and start time), unless Google now has a color result.
+    var earlier = {};
+    weekEvents.forEach(function (ev) {
+      if (ev.source === source && ev.reality) earlier[ev.title + "|" + ev.dayIndex + "|" + ev.startMinutes] = ev.reality;
+    });
     removeProviderEvents(source);
     var clearedSample = weekEvents.some(function (ev) { return ev.source === "sample"; });
     if (clearedSample) removeWeekEvents(function (ev) { return ev.source === "sample"; });
@@ -954,7 +960,7 @@
         endMinutes = item.end.getHours() * 60 + item.end.getMinutes();
         if (endMinutes <= startMinutes) endMinutes = null;
       }
-      addWeekEvent({
+      var ev = addWeekEvent({
         title: item.title,
         dayIndex: dayIndex,
         startMinutes: startMinutes,
@@ -963,6 +969,7 @@
         category: item.category || guessCategory(item.title),
         source: source
       });
+      ev.reality = item.reality || earlier[ev.title + "|" + ev.dayIndex + "|" + ev.startMinutes] || null;
       added++;
     });
 
@@ -1004,6 +1011,164 @@
     }, 700);
   }
 
+  /* ----- Google Calendar colors as results (opt-in) -----
+     Google Calendar events have no "done" checkbox, so students mark a block
+     by its color after it ends: green (Basil or Sage) = done, Graphite (grey)
+     = skipped, anything else = not marked. Off by default, because many
+     students already color-code events for other reasons. Uses the same
+     read-only permission as the normal connection. */
+  // >>> google-color-rules (tests/google-colors.test.mjs reads this block)
+  // Google's 11 event colors: [id, name, swatch]
+  var GOOGLE_COLORS = [["1", "Lavender", "#7986cb"], ["2", "Sage", "#33b679"], ["3", "Grape", "#8e24aa"],
+    ["4", "Flamingo", "#e67c73"], ["5", "Banana", "#f6bf26"], ["6", "Tangerine", "#f4511e"], ["7", "Peacock", "#039be5"],
+    ["8", "Graphite", "#616161"], ["9", "Blueberry", "#3f51b5"], ["10", "Basil", "#0b8043"], ["11", "Tomato", "#d50000"]];
+  var DEFAULT_RESULT_COLORS = { done: "10", skipped: "8" }; // Basil, Graphite
+  // Suggestion order. Red-ish colors are never suggested for "skipped" (no red X).
+  var DONE_SUGGESTIONS = ["10", "2", "7", "9", "1"];    // Basil, Sage, Peacock, Blueberry, Lavender
+  var SKIPPED_SUGGESTIONS = ["8", "5", "3", "1", "9"];  // Graphite, Banana, Grape, Lavender, Blueberry
+
+  function validResultColors(c) {
+    var ids = GOOGLE_COLORS.map(function (g) { return g[0]; });
+    return !!c && ids.indexOf(String(c.done)) !== -1 && ids.indexOf(String(c.skipped)) !== -1 && String(c.done) !== String(c.skipped);
+  }
+
+  // The result a block's color means, once the block is over; null = not marked
+  function googleColorResult(colorId, endTime, now, colors) {
+    if (!validResultColors(colors)) colors = DEFAULT_RESULT_COLORS;
+    if (!colorId || !(endTime instanceof Date) || isNaN(endTime.getTime()) || endTime.getTime() > now.getTime()) return null;
+    var id = String(colorId);
+    if (id === String(colors.done)) return { status: "done", detail: "" };
+    if (id === String(colors.skipped)) return { status: "skipped", detail: "" };
+    return null;
+  }
+
+  // used = { colorId: count } for upcoming blocks. Picks a done and a skipped color
+  // the student isn't already using; falls back to the defaults if all are taken.
+  function suggestResultColors(used) {
+    used = used || {};
+    var free = function (id) { return !used[id]; };
+    var done = DONE_SUGGESTIONS.filter(free)[0] || DEFAULT_RESULT_COLORS.done;
+    var skipped = SKIPPED_SUGGESTIONS.filter(function (id) { return free(id) && id !== done; })[0] ||
+      (done === DEFAULT_RESULT_COLORS.skipped ? DEFAULT_RESULT_COLORS.done : DEFAULT_RESULT_COLORS.skipped);
+    return { done: done, skipped: skipped };
+  }
+  // <<< google-color-rules
+  var GOOGLE_RESULTS_KEY = "tw_google_results";
+  const googleResultsToggle = document.getElementById("googleResultsToggle");
+  const googleRefreshBtn = document.getElementById("googleRefreshBtn");
+  function googleResultsOn() {
+    try { return localStorage.getItem(GOOGLE_RESULTS_KEY) === "1"; } catch (e) { return googleResultsToggle ? googleResultsToggle.checked : false; }
+  }
+  /* Each student's own done/skipped colors, saved in their browser */
+  var GOOGLE_COLORS_KEY = "tw_google_result_colors";
+  const resultColorsBox = document.getElementById("googleResultColors");
+  const doneColorSelect = document.getElementById("googleDoneColor");
+  const skippedColorSelect = document.getElementById("googleSkippedColor");
+  const resultsLegend = document.getElementById("googleResultsLegend");
+  const colorSuggest = document.getElementById("googleColorSuggest");
+  const colorSuggestText = document.getElementById("googleColorSuggestText");
+  const colorSuggestUse = document.getElementById("googleColorSuggestUse");
+  var resultColors = DEFAULT_RESULT_COLORS;
+  try {
+    var savedColors = JSON.parse(localStorage.getItem(GOOGLE_COLORS_KEY) || "null");
+    if (validResultColors(savedColors)) resultColors = { done: String(savedColors.done), skipped: String(savedColors.skipped) };
+  } catch (e) { /* none saved */ }
+  var upcomingColorCounts = {}; // filled on each Google refresh
+
+  function colorInfo(id) {
+    return GOOGLE_COLORS.filter(function (g) { return g[0] === String(id); })[0] || GOOGLE_COLORS[9];
+  }
+  function swatch(id) {
+    var dot = el("span", "swatch");
+    dot.setAttribute("aria-hidden", "true");
+    dot.style.background = colorInfo(id)[2];
+    return dot;
+  }
+  function renderResultColors() {
+    if (resultColorsBox) resultColorsBox.hidden = !(googleResultsToggle && googleResultsToggle.checked);
+    if (doneColorSelect) doneColorSelect.value = resultColors.done;
+    if (skippedColorSelect) skippedColorSelect.value = resultColors.skipped;
+    ["googleDoneSwatch", "googleSkippedSwatch"].forEach(function (id, i) {
+      var dot = document.getElementById(id);
+      if (dot) dot.style.background = colorInfo(i ? resultColors.skipped : resultColors.done)[2];
+    });
+    if (resultsLegend) {
+      resultsLegend.innerHTML = "";
+      resultsLegend.append("After a block ends, recolor it in Google Calendar: ", swatch(resultColors.done),
+        colorInfo(resultColors.done)[1] + " = done, ", swatch(resultColors.skipped),
+        colorInfo(resultColors.skipped)[1] + " = skipped. Then refresh here to review your week.");
+    }
+    renderColorSuggestion();
+  }
+  // Warn when the chosen colors are already on upcoming blocks (they'd count as results once those end)
+  function renderColorSuggestion() {
+    if (!colorSuggest) return;
+    var on = googleResultsToggle && googleResultsToggle.checked;
+    var clash = [resultColors.done, resultColors.skipped].filter(function (id) { return upcomingColorCounts[id]; });
+    if (!on || !clash.length) { colorSuggest.hidden = true; return; }
+    var pick = suggestResultColors(upcomingColorCounts);
+    var same = pick.done === resultColors.done && pick.skipped === resultColors.skipped;
+    var first = clash[0];
+    colorSuggestText.textContent = "You already use " + colorInfo(first)[1] + " on " + plural(upcomingColorCounts[first], "upcoming block") +
+      ", so " + (upcomingColorCounts[first] === 1 ? "it" : "they") + " would count as " + (first === resultColors.done ? "done" : "skipped") + " once over." +
+      (same ? "" : " Try " + colorInfo(pick.done)[1] + " = done, " + colorInfo(pick.skipped)[1] + " = skipped.");
+    colorSuggestUse.hidden = same;
+    colorSuggestUse.onclick = function () { setResultColors(pick, true); };
+    colorSuggest.hidden = false;
+  }
+  function setResultColors(c, announceIt) {
+    if (!validResultColors(c)) return false;
+    resultColors = { done: String(c.done), skipped: String(c.skipped) };
+    try { localStorage.setItem(GOOGLE_COLORS_KEY, JSON.stringify(resultColors)); } catch (e) { /* this visit only */ }
+    renderResultColors();
+    if (announceIt) setStatus(providerStatusNote, "Now using " + colorInfo(resultColors.done)[1] + " for done and " +
+      colorInfo(resultColors.skipped)[1] + " for skipped. Tap Refresh from Google to apply.", "");
+    return true;
+  }
+  [doneColorSelect, skippedColorSelect].forEach(function (sel, i) {
+    if (!sel) return;
+    GOOGLE_COLORS.forEach(function (g) {
+      var opt = document.createElement("option");
+      opt.value = g[0];
+      opt.textContent = g[1];
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", function () {
+      var next = i ? { done: resultColors.done, skipped: sel.value } : { done: sel.value, skipped: resultColors.skipped };
+      if (!setResultColors(next, true)) {
+        sel.value = i ? resultColors.skipped : resultColors.done;
+        setStatus(providerStatusNote, "Pick two different colors, one for done and one for skipped.", "error");
+      }
+    });
+  });
+
+  if (googleResultsToggle) {
+    googleResultsToggle.checked = googleResultsOn();
+    googleResultsToggle.addEventListener("change", function () {
+      try { localStorage.setItem(GOOGLE_RESULTS_KEY, googleResultsToggle.checked ? "1" : "0"); } catch (e) { /* private mode: this visit only */ }
+      renderResultColors();
+      setStatus(providerStatusNote, googleResultsToggle.checked
+        ? "Calendar colors will count as results. Tap Refresh from Google to read them."
+        : "Calendar colors won't count as results. Results you already marked stay as they are.", "");
+    });
+  }
+  renderResultColors();
+  if (googleRefreshBtn) {
+    googleRefreshBtn.addEventListener("click", function () {
+      if (!googleTokenClient) {
+        setStatus(providerStatusNote, "Google sign-in is still loading. Try again in a moment.", "error");
+        return;
+      }
+      // Google's access lasts about an hour, so ask again; with earlier consent this is one quick tap
+      googleRefreshBtn.disabled = true;
+      setProviderBusy(googleBtn, "Waiting for Google\u2026");
+      googleTokenClient.requestAccessToken({ prompt: "" });
+    });
+  }
+  function showGoogleRefresh(show) {
+    if (googleRefreshBtn) { googleRefreshBtn.hidden = !show; googleRefreshBtn.disabled = false; }
+  }
+
   /* ----- Google Calendar (Google Identity Services, browser-only) ----- */
   function initGoogle() {
     if (!GOOGLE_CLIENT_ID) return;
@@ -1041,6 +1206,7 @@
 
   function googleFailed(message) {
     resetProviderButton(googleBtn);
+    showGoogleRefresh(false);
     setStatus(providerStatusNote, message, "error");
   }
 
@@ -1077,24 +1243,42 @@
         });
       })
       .then(function (result) {
+        var useColors = googleResultsOn();
+        var now = new Date();
+        var done = 0, skipped = 0;
+        var upcomingColors = {};
         var items = result.items
           .filter(function (ev) { return ev.status !== "cancelled" && ev.start; })
           .map(function (ev) {
             var allDay = !ev.start.dateTime;
+            var start = allDay ? parseLocalDate(ev.start.date) : new Date(ev.start.dateTime);
+            var end = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : null;
+            // When the block is over: its end time, or the end of the day for all-day items
+            var over = allDay ? new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1) : (end || start);
+            if (ev.colorId && over.getTime() > now.getTime()) upcomingColors[ev.colorId] = (upcomingColors[ev.colorId] || 0) + 1;
+            var reality = useColors ? googleColorResult(ev.colorId, over, now, resultColors) : null;
+            if (reality && reality.status === "done") done++;
+            if (reality && reality.status === "skipped") skipped++;
             return {
               title: ev.summary || "(No title)",
               category: ev.fromWorkCalendar ? "work" : null,
-              start: allDay ? parseLocalDate(ev.start.date) : new Date(ev.start.dateTime),
-              end: ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : null,
-              allDay: allDay
+              start: start,
+              end: end,
+              allDay: allDay,
+              reality: reality
             };
           });
         var outcome = replaceWithRealEvents("google", items);
+        upcomingColorCounts = upcomingColors;
+        renderColorSuggestion();
         setProviderConnected(googleBtn, "Google Calendar");
+        showGoogleRefresh(true);
+        if (useColors && (done || skipped)) track("google_results");
         setStatus(providerStatusNote, "Added " + plural(outcome.added, "event") + " from " +
           plural(result.calendars, "Google calendar") + " for this week" +
           (outcome.clearedSample ? " (Maya's sample week was cleared)" : "") +
-          ". Read-only — nothing in your Google account was changed.", "success");
+          (useColors ? ". From your colors: " + done + " done, " + skipped + " skipped" : "") +
+          ". Read-only: nothing in your Google account was changed.", "success");
       })
       .catch(function (err) {
         googleFailed("Couldn't load your Google Calendar: " + err.message + ".");
@@ -1105,6 +1289,7 @@
     if (googleAccessToken && window.google) google.accounts.oauth2.revoke(googleAccessToken, function () {});
     googleAccessToken = null;
     resetProviderButton(googleBtn);
+    showGoogleRefresh(false);
     removeProviderEvents("google");
     renderAll();
     setStatus(providerStatusNote, "Disconnected Google Calendar and removed its events from this page.", "");
@@ -1492,6 +1677,37 @@
     return "personal";
   }
 
+  /* Puts this week's occurrences of parsed .ics events into the grid, replacing
+     any earlier calendar-file or Moodle import (both use source "ics", which
+     saved weeks already accept). Returns how many were added. */
+  function addIcsEventsToWeek(allEvents) {
+    removeWeekEvents(function (ev) { return ev.source === "ics"; });
+    var added = 0;
+    allEvents.forEach(function (event) {
+      occurrencesThisWeek(event).forEach(function (occ) {
+        if (added >= MAX_ICS_EVENTS_IN_WEEK) return;
+        var startMinutes = occ.getHours() * 60 + occ.getMinutes();
+        var endMinutes = null;
+        if (!event.allDay && event.end) {
+          var length = Math.round((event.end - event.start) / 60000);
+          if (length > 0 && startMinutes + length < 1440) endMinutes = startMinutes + length;
+        }
+        addWeekEvent({
+          title: event.title,
+          dayIndex: dayIndexForDate(occ),
+          startMinutes: event.allDay ? 0 : startMinutes,
+          endMinutes: endMinutes,
+          allDay: event.allDay,
+          category: guessCategory(event.title),
+          source: "ics"
+        });
+        added++;
+      });
+    });
+    renderAll();
+    return added;
+  }
+
   if (icsFileInput) {
     icsFileInput.addEventListener("change", function () {
       var file = icsFileInput.files && icsFileInput.files[0];
@@ -1514,31 +1730,7 @@
             return;
           }
 
-          // A new upload replaces the previous one
-          removeWeekEvents(function (ev) { return ev.source === "ics"; });
-          var added = 0;
-          allEvents.forEach(function (event) {
-            occurrencesThisWeek(event).forEach(function (occ) {
-              if (added >= MAX_ICS_EVENTS_IN_WEEK) return;
-              var startMinutes = occ.getHours() * 60 + occ.getMinutes();
-              var endMinutes = null;
-              if (!event.allDay && event.end) {
-                var length = Math.round((event.end - event.start) / 60000);
-                if (length > 0 && startMinutes + length < 1440) endMinutes = startMinutes + length;
-              }
-              addWeekEvent({
-                title: event.title,
-                dayIndex: dayIndexForDate(occ),
-                startMinutes: event.allDay ? 0 : startMinutes,
-                endMinutes: endMinutes,
-                allDay: event.allDay,
-                category: guessCategory(event.title),
-                source: "ics"
-              });
-              added++;
-            });
-          });
-          renderAll();
+          var added = addIcsEventsToWeek(allEvents); // a new upload replaces the previous one
 
           var total = allEvents.length + " event" + (allEvents.length === 1 ? "" : "s");
           if (added) {
@@ -1560,6 +1752,106 @@
       };
       reader.readAsText(file);
     });
+  }
+
+  /* ---------- 13b. Moodle calendar link (Brandeis) ----------
+     The student pastes Moodle's "Get calendar URL" link. Browsers can't read
+     it directly, so worker.js (POST /api/ics-feed) fetches it and returns the
+     .ics text, which goes through the same parser as a file upload. The link
+     holds a private Moodle token, so it is kept only in this browser
+     (localStorage) and sent only in a POST body, never in a URL. */
+  var MOODLE_FEED_KEY = "tw_moodle_feed";
+  var MOODLE_LINK_RE = /^https:\/\/moodle\.brandeis\.edu\/calendar\/export_execute\.php\?/i;
+  const moodleForm = document.getElementById("moodleFeedForm");
+  const moodleInput = document.getElementById("moodleFeedUrl");
+  const moodleBtn = document.getElementById("moodleFeedBtn");
+  const moodleForget = document.getElementById("moodleFeedForget");
+  const moodleStatus = document.getElementById("moodleFeedStatus");
+
+  function readMoodleLink() {
+    try { return localStorage.getItem(MOODLE_FEED_KEY) || ""; } catch (e) { return ""; }
+  }
+  function storeMoodleLink(link) {
+    try { if (link) localStorage.setItem(MOODLE_FEED_KEY, link); else localStorage.removeItem(MOODLE_FEED_KEY); } catch (e) { /* private mode: works for this visit only */ }
+  }
+
+  var MOODLE_ERRORS = {
+    not_moodle_link: "That doesn't look like a Moodle calendar link. In Moodle, use Export calendar → Get calendar URL, then copy the whole link.",
+    moodle_refused: "Moodle didn't accept that link. It may have expired: get a fresh one from Moodle and paste it again.",
+    unreachable: "Couldn't reach Moodle just now. Try again in a minute.",
+    not_calendar: "Moodle sent back something that isn't a calendar. Get a fresh link and try again.",
+    too_large: "That Moodle calendar is too big. In Moodle, choose \u201cRecent and next 60 days\u201d and get a new link.",
+    too_many: "Too many tries from this network. Wait a bit and try again."
+  };
+
+  function loadMoodleFeed(link, quiet) {
+    if (!quiet) setStatus(moodleStatus, "Getting your Moodle deadlines\u2026", "");
+    if (moodleBtn) moodleBtn.disabled = true;
+    return fetch("/api/ics-feed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: link }),
+      credentials: "same-origin",
+      cache: "no-store"
+    }).then(function (res) {
+      if (res.ok) return res.text();
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        var err = new Error(data.error || "unreachable");
+        err.code = data.error || (res.status === 404 ? "no_server" : "unreachable");
+        throw err;
+      });
+    }).then(function (text) {
+      var allEvents = parseIcs(text);
+      var added = addIcsEventsToWeek(allEvents);
+      storeMoodleLink(link);
+      if (moodleForget) moodleForget.hidden = false;
+      if (moodleInput) moodleInput.value = "";
+      track("calendar_moodle");
+      setStatus(moodleStatus, added
+        ? "Added " + plural(added, "Moodle item") + " for this week. TimeWise will refresh them each time you open this page."
+        : "Your Moodle link works, but nothing is due this week (" + weekRangeLabel() + "). It will refresh each time you open this page.", "success");
+    }).catch(function (err) {
+      var msg = err.code === "no_server"
+        ? "The Moodle link only works on the live TimeWise site. On this copy, use Export in Moodle and import the file instead."
+        : MOODLE_ERRORS[err.code] || MOODLE_ERRORS.unreachable;
+      if (err.code === "moodle_refused" || err.code === "not_moodle_link") {
+        storeMoodleLink("");
+        if (moodleForget) moodleForget.hidden = true;
+      }
+      setStatus(moodleStatus, msg, "error");
+    }).then(function () {
+      if (moodleBtn) moodleBtn.disabled = false;
+    });
+  }
+
+  if (moodleForm && moodleInput) {
+    moodleForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var link = moodleInput.value.trim();
+      if (!MOODLE_LINK_RE.test(link)) {
+        setStatus(moodleStatus, MOODLE_ERRORS.not_moodle_link, "error");
+        moodleInput.focus();
+        return;
+      }
+      loadMoodleFeed(link, false);
+    });
+    if (moodleForget) {
+      moodleForget.addEventListener("click", function () {
+        storeMoodleLink("");
+        moodleForget.hidden = true;
+        removeWeekEvents(function (ev) { return ev.source === "ics"; });
+        renderAll();
+        setStatus(moodleStatus, "Forgot your Moodle link on this device and removed its deadlines from this page.", "");
+      });
+    }
+    // Returning visitor: quietly refresh this week's deadlines from the saved link
+    var savedMoodleLink = readMoodleLink();
+    if (savedMoodleLink && MOODLE_LINK_RE.test(savedMoodleLink)) {
+      moodleForget.hidden = false;
+      setTimeout(function () { loadMoodleFeed(savedMoodleLink, true); }, 0);
+    } else if (savedMoodleLink) {
+      storeMoodleLink("");
+    }
   }
 
   /* ---------- 14. Plan vs. Reality ----------

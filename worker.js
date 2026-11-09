@@ -15,6 +15,12 @@
                                   → dated items from the databases they shared
      POST /api/notion/disconnect  → forgets the cookie
 
+     POST /api/ics-feed           → { url } a Brandeis Moodle calendar export link;
+                                    returns that calendar (.ics text). Only
+                                    moodle.brandeis.edu export links are fetched,
+                                    and the link (it holds a private token) is
+                                    never logged or stored.
+
      POST /api/waitlist           → saves an early-access sign-up + survey answers
      POST /api/track              → counts (anonymously) which demo features a visitor tried
      POST /api/ping               → anonymous visit + time on site, by ?from= link tag
@@ -84,6 +90,9 @@ async function handleApi(request, env, url) {
   const configured = Boolean(env.NOTION_CLIENT_ID && env.NOTION_CLIENT_SECRET);
 
   switch (route) {
+    case "POST /api/ics-feed":
+      return handleIcsFeed(request, env, url);
+
     case "GET /api/notion/status": {
       const session = readSession(request);
       return json({ configured, connected: Boolean(session), workspace: session ? session.w : null });
@@ -312,7 +321,7 @@ const SURVEY = {
 
 // Demo features script.js reports (each counted at most once per visitor)
 const TRACKED_EVENTS = [
-  "visit", "event_added", "calendar_google", "calendar_notion", "calendar_ics",
+  "visit", "event_added", "calendar_google", "calendar_notion", "calendar_ics", "calendar_moodle", "google_results",
   "replan_used", "replan_applied", "reflection_viewed", "reflection_step_added",
   "quiz_completed", "waitlist_joined", "feedback_sent", "week_copied", "colors_customized",
   "repeat_used", "setup_started", "setup_classes_added", "setup_google_clicked",
@@ -395,6 +404,79 @@ function plainText(richText) {
 
 function redirectUri(url) {
   return url.origin + "/api/notion/callback";
+}
+
+/* ---------- Moodle calendar feed (read-only) ----------
+   Browsers can't fetch Moodle's calendar link directly (no CORS), so the Worker
+   fetches it and passes the .ics text straight back. Safety rules:
+   - only https://moodle.brandeis.edu/calendar/export_execute.php links, with
+     only Moodle's own export parameters, so this can't be used to reach any
+     other site
+   - the link arrives in a POST body (not the URL), so it never appears in
+     request logs; nothing here logs or stores it, and errors never echo it
+   - redirects are refused, responses over 2 MB are cut off, 10-second timeout
+   - only TimeWise's own pages may call it, 60 times per network per hour */
+const MOODLE_HOST = "moodle.brandeis.edu";
+const MOODLE_PATH = "/calendar/export_execute.php";
+const MOODLE_PARAMS = ["userid", "authtoken", "preset_what", "preset_time"];
+const MAX_FEED_BYTES = 2 * 1024 * 1024;
+
+export function checkMoodleFeedUrl(raw) {
+  if (typeof raw !== "string" || raw.length > 600) return null;
+  let u;
+  try { u = new URL(raw.trim()); } catch (e) { return null; }
+  if (u.protocol !== "https:" || u.hostname !== MOODLE_HOST || u.port || u.username || u.password) return null;
+  if (u.pathname !== MOODLE_PATH) return null;
+  for (const key of u.searchParams.keys()) if (!MOODLE_PARAMS.includes(key)) return null;
+  if (!u.searchParams.get("userid") || !u.searchParams.get("authtoken")) return null;
+  u.hash = "";
+  return u.toString();
+}
+
+async function handleIcsFeed(request, env, url) {
+  if (!sameOrigin(request, url)) return json({ error: "bad_origin" }, 403);
+  if (env.DB) {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    let ok = true;
+    try { ok = await allow(env.DB, "ics-feed:" + ip, [60, 3600]); } catch (e) { /* table missing: don't block */ }
+    if (!ok) return json({ error: "too_many" }, 429);
+  }
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ error: "bad_request" }, 400); }
+  const feedUrl = checkMoodleFeedUrl(body && body.url);
+  if (!feedUrl) return json({ error: "not_moodle_link" }, 400);
+
+  let res;
+  try {
+    res = await fetch(feedUrl, {
+      redirect: "manual",
+      headers: { Accept: "text/calendar" },
+      signal: AbortSignal.timeout(10000)
+    });
+  } catch (e) {
+    return json({ error: "unreachable" }, 502); // deliberately no details: they could include the link
+  }
+  if (res.status !== 200 || !res.body) return json({ error: "moodle_refused" }, 502);
+
+  const reader = res.body.getReader();
+  const chunks = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_FEED_BYTES) { try { await reader.cancel(); } catch (e) {} return json({ error: "too_large" }, 413); }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const c of chunks) { bytes.set(c, offset); offset += c.byteLength; }
+  const text = new TextDecoder().decode(bytes);
+  if (!/^\s*BEGIN:VCALENDAR/i.test(text)) return json({ error: "not_calendar" }, 502);
+
+  return new Response(text, {
+    headers: { "Content-Type": "text/calendar; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }
+  });
 }
 
 function json(data, status = 200) {

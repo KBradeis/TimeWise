@@ -51,7 +51,7 @@
   var LEVEL = [["unknown", "Unknown"], ["low", "Low"], ["moderate", "Moderate"], ["high", "High"]];
   var DECISION = [["pending", "Pending"], ["keep", "Keep"], ["iterate", "Iterate"], ["revert", "Revert"], ["inconclusive", "Inconclusive"]];
   var DEMO_FEATURES = [
-    ["calendar_google", "Connected Google Calendar"], ["calendar_notion", "Connected Notion"], ["calendar_ics", "Uploaded a calendar file"],
+    ["calendar_google", "Connected Google Calendar"], ["calendar_notion", "Connected Notion"], ["calendar_ics", "Uploaded a calendar file"], ["calendar_moodle", "Added Moodle deadlines"], ["google_results", "Got results from Google Calendar colors"],
     ["event_added", "Added an event by hand"], ["replan_used", "Tried Replan my day"], ["replan_applied", "Applied a replan"],
     ["reflection_viewed", "Saw a reflection"], ["reflection_step_added", "Added a suggested next step"],
     ["quiz_completed", "Finished the practice quiz"], ["waitlist_joined", "Answered the early-access form"], ["feedback_sent", "Sent feedback"],

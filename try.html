@@ -40,6 +40,36 @@
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=IBM+Plex+Mono:wght@500&family=Schibsted+Grotesk:wght@600;700;800&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css" />
+  <!-- Moodle feed box. Kept here because only try.html uses it; move into styles.css whenever convenient. -->
+  <style>
+    .feed-form { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .feed-form label { display: flex; flex-direction: column; gap: 2px; }
+    .feed-form label small { color: var(--text-muted); font-size: 0.82rem; font-weight: 400; }
+    .feed-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .feed-row input { flex: 1 1 240px; min-width: 0; min-height: 44px; padding: 10px 12px; font-family: var(--font-body);
+      font-size: 0.95rem; color: var(--text); background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-sm); }
+    .feed-row input:focus { border-color: var(--purple); outline: none; }
+    .feed-row input:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+    .feed-row .btn { min-height: 44px; }
+    .feed-form .link-btn { align-self: flex-start; min-height: 40px; }
+    .feed-form .ics-status { margin-top: 0; }
+    /* Google colors as results */
+    .google-refresh { margin-top: 10px; min-height: 44px; }
+    .google-results { margin-top: 12px; }
+    .google-results-toggle { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; min-height: 40px; }
+    .google-results-toggle input { width: 20px; height: 20px; margin-top: 2px; flex-shrink: 0; accent-color: var(--pri); }
+    .google-results-toggle input:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+    .google-results-toggle span { display: flex; flex-direction: column; gap: 2px; }
+    .google-results-toggle small { color: var(--text-muted); font-size: 0.82rem; font-weight: 400; display: block; }
+    .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 3px 0 2px; vertical-align: baseline; }
+    .result-colors { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; align-items: center; margin: 10px 0 0 30px; max-width: 360px; }
+    .result-colors label { font-size: 0.88rem; font-weight: 700; }
+    .result-colors select { min-height: 40px; padding: 6px 10px; font-family: var(--font-body); font-size: 0.95rem; color: var(--text);
+      background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-sm); }
+    .result-colors select:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+    .color-suggest { margin: 10px 0 0 30px; font-size: 0.88rem; color: var(--text-muted); }
+    .color-suggest .link-btn { min-height: 40px; }
+  </style>
 </head>
 <body class="has-app-tabs">
 
@@ -219,6 +249,25 @@
               <button type="button" class="provider-btn" data-provider="google" data-label="Google Calendar">Connect Google Calendar</button>
               <button type="button" class="provider-btn" data-provider="notion" data-label="Notion">Connect Notion</button>
             </div>
+            <button type="button" class="btn btn-secondary google-refresh" id="googleRefreshBtn" hidden>Refresh from Google</button>
+            <div class="google-results">
+              <label class="google-results-toggle">
+                <input type="checkbox" id="googleResultsToggle" />
+                <span><strong>Use my Google Calendar colors as results</strong>
+                  <small id="googleResultsLegend">After a block ends, recolor it in Google Calendar: Basil = done, Graphite = skipped. Then refresh here to review your week.</small>
+                </span>
+              </label>
+              <div class="result-colors" id="googleResultColors" hidden>
+                <label for="googleDoneColor"><span class="swatch" id="googleDoneSwatch" aria-hidden="true"></span>Done color</label>
+                <select id="googleDoneColor"></select>
+                <label for="googleSkippedColor"><span class="swatch" id="googleSkippedSwatch" aria-hidden="true"></span>Skipped color</label>
+                <select id="googleSkippedColor"></select>
+              </div>
+              <p class="color-suggest" id="googleColorSuggest" aria-live="polite" hidden>
+                <span id="googleColorSuggestText"></span>
+                <button type="button" class="link-btn" id="googleColorSuggestUse">Use these</button>
+              </p>
+            </div>
             <p class="provider-status-note" id="providerStatusNote" aria-live="polite"></p>
             <p class="calendar-panel-sub provider-unverified-note">
               TimeWise is a student project, so Google shows a <em>"Google hasn't verified this app"</em> screen.
@@ -234,6 +283,18 @@
               <input type="file" id="icsFileInput" accept=".ics,text/calendar" />
             </label>
             <p class="ics-status" id="icsStatus" aria-live="polite"></p>
+            <form class="feed-form" id="moodleFeedForm" novalidate>
+              <label for="moodleFeedUrl"><strong>Brandeis student? Add your Moodle deadlines</strong>
+                <small>Paste your Moodle calendar link (steps below). TimeWise refreshes it each time you open this page. The link stays on this device only.</small>
+              </label>
+              <div class="feed-row">
+                <input type="url" id="moodleFeedUrl" inputmode="url" autocomplete="off" spellcheck="false"
+                  placeholder="https://moodle.brandeis.edu/calendar/export_execute.php?…" />
+                <button type="submit" class="btn btn-secondary" id="moodleFeedBtn">Add deadlines</button>
+              </div>
+              <button type="button" class="link-btn" id="moodleFeedForget" hidden>Forget my Moodle link</button>
+              <p class="ics-status" id="moodleFeedStatus" aria-live="polite"></p>
+            </form>
             <details class="ics-help">
               <summary>How do I get a calendar file from my app?</summary>
               <p class="ics-help-app"><strong>Google Calendar</strong></p>
@@ -253,10 +314,11 @@
                   Publish it, copy the <strong>ICS</strong> link, and open that link in your browser to download the file.</li>
                 <li><strong>Classic Outlook on Windows:</strong> open your calendar, then <strong>File</strong> → <strong>Save Calendar</strong>.</li>
               </ol>
-              <p class="ics-help-app"><strong>Moodle</strong></p>
+              <p class="ics-help-app"><strong>Moodle (Brandeis)</strong></p>
               <ol>
-                <li>Open the <strong>Calendar</strong> page → <strong>Import or export calendars</strong> → <strong>Export calendar</strong>.</li>
-                <li>Pick the events and time range, then click <strong>Export</strong>.</li>
+                <li>In Moodle, open <strong>Calendar</strong> → <strong>Import or export calendars</strong> → <strong>Export calendar</strong>.</li>
+                <li>Choose <strong>All courses</strong> (or Events related to courses) and <strong>Recent and next 60 days</strong>.</li>
+                <li>Click <strong>Get calendar URL</strong>, copy the link, and paste it in the Moodle box above. Or click <strong>Export</strong> to download a file instead.</li>
               </ol>
               <p class="ics-help-note">Only on a phone? The iPhone and Android calendar apps can't export a file, so use a computer for this step.
                 To refresh later, export and import again.</p>
